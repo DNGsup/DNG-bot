@@ -23,6 +23,7 @@ async def on_ready():
     try:
         synced = await bot.tree.sync()
         print(f"✅ Synced {len(synced)} commands")
+        asyncio.create_task(schedule_boss_notifications(bot))
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
@@ -35,7 +36,6 @@ async def lock_thread_after_delay(thread: discord.Thread):
         print(f"Thread {thread.name} not found, it might be deleted.")
     except discord.Forbidden:
         print(f"Bot lacks permission to lock thread {thread.name}.")
-
 
 @bot.tree.command(name="broadcast_setting", description="ตั้งค่าห้องบอร์ดแคสต์")
 @app_commands.describe(
@@ -120,9 +120,6 @@ async def broadcast(
         await interaction.response.send_message("เกิดข้อผิดพลาดในการส่งข้อความ", ephemeral=True)
         print(f"Error in broadcast: {e}")
 # //////////////////////////// notifications ////////////////////////////
-# เรียกใช้งาน scheduler
-asyncio.create_task(schedule_boss_notifications(bot))
-
 local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งค่า Timezone เป็นไทย
 
 @bot.tree.command(name="notifications", description="จัดการระบบแจ้งเตือนบอส")
