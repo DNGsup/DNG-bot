@@ -14,14 +14,6 @@ class BossName(Enum):
     DUCAS = "Ducas"
     WORLD_DUNGEON = "World Dungeon"
 
-class BroadcastSettingAction(Enum):
-    ADD = "add"
-    REMOVE = "remove"
-
-class BroadcastMode(Enum):
-    STANDARD = "standard"
-    MULTI = "multi"
-
 class Owner(Enum):
     KNIGHT = "Knight"
     BISHOP = "Bishop"
@@ -32,3 +24,21 @@ OWNER_ICONS = {
     "Bishop": "💚",
     "RF": "💛"
 }
+
+class BroadcastSettingAction(Enum):
+    ADD = "add"
+    REMOVE = "remove"
+
+class BroadcastMode(Enum):
+    STANDARD = "standard"
+    MULTI = "multi"
+
+class NotificationAction(Enum):
+    ADD = "add"
+    DEL = "del"
+    NOTI = "noti"
+    LIST = "list"
+
+class NotificationType(Enum):
+    ROOM = "room"
+    ROLE = "role"
