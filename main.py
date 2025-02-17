@@ -24,8 +24,8 @@ async def on_ready():
         print(f"❌ Error syncing commands: {e}")
 # //////////////////////////// broadcast ////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
-    """ล็อกเธรดหลังจาก 24 ชั่วโมง"""
-    await asyncio.sleep(86400)
+    """ล็อกเธรดหลังจาก 24 ชั่วโมง ค่าคือ (86400)"""
+    await asyncio.sleep(10)
     try:
         await thread.edit(locked=True)
     except discord.NotFound:
@@ -71,7 +71,7 @@ async def broadcast(
         return
 
     embed = discord.Embed(
-        title=f"{OWNER_ICONS[owner.value]} ✦～ 𝐁𝐨𝐬𝐬﹕{boss_name.value} 𝐃𝐚𝐭𝐞﹕{date} {hour:02}:{minute:02} ～✦",
+        title=f" {OWNER_ICONS[owner.value]}  ✦～ 𝐁𝐨𝐬𝐬﹕{boss_name.value} 𝐃𝐚𝐭𝐞﹕{date} {hour:02}:{minute:02} ～✦",
         color=discord.Color.blue()
     )
 
@@ -84,7 +84,7 @@ async def broadcast(
                 return
 
             msg = await room.send(embed=embed)
-            thread = await msg.create_thread(name=f"{boss_name.value} Discussion")
+            thread = await msg.create_thread(name=f"📌 {boss_name.value} ⤵")
             bot.loop.create_task(lock_thread_after_delay(thread))
             await interaction.response.send_message(f"📢 Broadcast sent to {room.mention}", ephemeral=True)
 
@@ -107,7 +107,7 @@ async def broadcast(
 
             for channel in found_channels:
                 msg = await channel.send(embed=embed)
-                thread = await msg.create_thread(name=f"{boss_name.value} Discussion")
+                thread = await msg.create_thread(name=f"📌 {boss_name.value} ⤵")
                 bot.loop.create_task(lock_thread_after_delay(thread))
 
             await interaction.response.send_message(
