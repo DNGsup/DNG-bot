@@ -5,8 +5,10 @@ from discord import app_commands
 import asyncio
 
 from myserver import server_on
-from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS
+from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS ,NotificationAction ,NotificationType
 from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
+from database import set_notification_room ,set_notification_role ,add_boss_notification ,remove_boss_notification ,get_boss_notifications
+from scheduler import schedule_boss_notifications
 
 intents = discord.Intents.default()
 intents.messages = True  # ✅ เปิดการอ่านข้อความ
@@ -22,7 +24,7 @@ async def on_ready():
         print(f"✅ Synced {len(synced)} commands")
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
-# //////////////////////////// broadcast ////////////////////////////
+# //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง ค่าคือ (86400)"""
     await asyncio.sleep(10)
@@ -71,7 +73,7 @@ async def broadcast(
         return
 
     embed = discord.Embed(
-        title=f" {OWNER_ICONS[owner.value]}  ✦～ 𝐁𝐨𝐬𝐬﹕{boss_name.value} 𝐃𝐚𝐭𝐞﹕{date} {hour:02}:{minute:02} ～✦",
+        title=f" {OWNER_ICONS[owner.value]}・𝐁𝐨𝐬𝐬﹕{boss_name.value} 𝐃𝐚𝐭𝐞﹕{date} {hour:02}:{minute:02} ～✦",
         color=discord.Color.blue()
     )
 
@@ -117,7 +119,47 @@ async def broadcast(
     except Exception as e:
         await interaction.response.send_message("เกิดข้อผิดพลาดในการส่งข้อความ", ephemeral=True)
         print(f"Error in broadcast: {e}")
+# //////////////////////////// notifications ////////////////////////////
+# เรียกใช้งาน scheduler
+bot.loop.create_task(schedule_boss_notifications(bot))
 
+@bot.tree.command(name="notifications", description="จัดการระบบแจ้งเตือนบอส")
+@app_commands.describe(action="เลือกการกระทำ", option="เลือกประเภทของการตั้งค่า")
+async def notifications(interaction: discord.Interaction, action: NotificationAction, option: NotificationType = None,
+                        value: str = None, boss_name: BossName = None, hours: int = None, minutes: int = None,
+                        owner: Owner = None):
+    guild_id = str(interaction.guild_id)
+
+    if action == NotificationAction.ADD:
+        if option == NotificationType.ROOM:
+            set_notification_room(guild_id, int(value))
+            await interaction.response.send_message(f"✅ ตั้งค่าห้องแจ้งเตือนเป็น <#{value}>", ephemeral=True)
+
+        elif option == NotificationType.ROLE:
+            set_notification_role(guild_id, int(value))
+            await interaction.response.send_message(f"✅ ตั้งค่าโรลแจ้งเตือนเป็น <@&{value}>", ephemeral=True)
+
+    elif action == NotificationAction.DEL:
+        remove_boss_notification(guild_id, boss_name.value)
+        await interaction.response.send_message(f"✅ ลบแจ้งเตือนของ {boss_name.value}", ephemeral=True)
+
+    elif action == NotificationAction.NOTI:
+        add_boss_notification(guild_id, boss_name.value, hours, minutes, owner.value)
+        await interaction.response.send_message(f"✅ เพิ่มแจ้งเตือน {boss_name.value} ที่ {hours:02}:{minutes:02}",
+                                                ephemeral=True)
+
+    elif action == NotificationAction.LIST:
+        notifications = get_boss_notifications(guild_id)
+        if not notifications:
+            await interaction.response.send_message("❌ ไม่มีรายการแจ้งเตือนบอส", ephemeral=True)
+            return
+        message = "📜 𝐁𝐨𝐬𝐬 𝐒𝐩𝐚𝐰𝐧 𝐋𝐢𝐬𝐭\n"
+        for idx, noti in enumerate(notifications, 1):
+            message += f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{noti['boss_name']} 𝐒𝐩𝐚𝐰𝐧 ﹕{noti['spawn_time']} 𝐎𝐰𝐧𝐞𝐫 ﹕{noti['owner']}\n"
+        await interaction.response.send_message(message, ephemeral=True)
+
+    else:
+        await interaction.response.send_message("❌ คำสั่งไม่ถูกต้อง", ephemeral=True)
 # ------------------------------------------------------------------------------------------
 server_on()
 bot.run(os.getenv('TOKEN'))
