@@ -8,7 +8,7 @@ from myserver import server_on
 from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS ,NotificationAction ,NotificationType
 from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
 from database import set_notification_room ,set_notification_role ,add_boss_notification ,remove_boss_notification ,get_boss_notifications
-from scheduler import schedule_boss_notifications
+from scheduler import schedule_boss_notifications ,ConfirmView
 
 intents = discord.Intents.default()
 intents.messages = True  # ✅ เปิดการอ่านข้อความ
@@ -55,7 +55,6 @@ async def broadcast_setting(
     elif action == BroadcastSettingAction.REMOVE:
         remove_broadcast_channel(guild_id, channel.id)
         await interaction.response.send_message(f"✅ ลบห้อง {channel.mention} ออกจากรายการบอร์ดแคสต์!", ephemeral=True)
-
 
 @bot.tree.command(name="broadcast", description="ส่งข้อความบอร์ดแคสต์")
 async def broadcast(
@@ -147,19 +146,23 @@ async def notifications(interaction: discord.Interaction, action: NotificationAc
         add_boss_notification(guild_id, boss_name.value, hours, minutes, owner.value)
         await interaction.response.send_message(f"✅ เพิ่มแจ้งเตือน {boss_name.value} ที่ {hours:02}:{minutes:02}",
                                                 ephemeral=True)
-
     elif action == NotificationAction.LIST:
         notifications = get_boss_notifications(guild_id)
         if not notifications:
             await interaction.response.send_message("❌ ไม่มีรายการแจ้งเตือนบอส", ephemeral=True)
             return
-        message = "📜 𝐁𝐨𝐬𝐬 𝐒𝐩𝐚𝐰𝐧 𝐋𝐢𝐬𝐭\n"
-        for idx, noti in enumerate(notifications, 1):
-            message += f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{noti['boss_name']} 𝐒𝐩𝐚𝐰𝐧 ﹕{noti['spawn_time']} 𝐎𝐰𝐧𝐞𝐫 ﹕{noti['owner']}\n"
-        await interaction.response.send_message(message, ephemeral=True)
 
-    else:
-        await interaction.response.send_message("❌ คำสั่งไม่ถูกต้อง", ephemeral=True)
+        embed = discord.Embed(title="📜 𝐁𝐨𝐬𝐬 𝐒𝐩𝐚𝐰𝐧 𝐋𝐢𝐬𝐭", color=discord.Color.blue())
+        for idx, noti in enumerate(notifications, 1):
+            embed.add_field(
+                name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{noti['boss_name']} 𝐎𝐰𝐧𝐞𝐫 ﹕{noti['owner']}",
+                value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{noti['spawn_time']}",
+                inline=False
+            )
+
+        view = ConfirmView(embed, guild_id)  # ✅ เพิ่มปุ่ม "📢 ประกาศ"
+
+        await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 # ------------------------------------------------------------------------------------------
 server_on()
 bot.run(os.getenv('TOKEN'))
