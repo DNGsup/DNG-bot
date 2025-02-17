@@ -57,7 +57,7 @@ class ConfirmView(discord.ui.View):
         self.embed = embed
         self.guild_id = guild_id
 
-    @discord.ui.Button(label="📢 ประกาศ", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="📢 ประกาศ", style=discord.ButtonStyle.green)
     async def announce(self, interaction: discord.Interaction, Button: discord.ui.Button):
         await interaction.response.defer()
 
