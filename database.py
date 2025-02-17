@@ -36,14 +36,17 @@ class Database:
 
 db = Database()
 
-# ใช้ dictionary หรือ database ตามที่คุณใช้เก็บค่าห้องบอร์ดแคสต์
-broadcast_rooms = {}
+# เพิ่มให้เก็บข้อมูลเป็น dict โดยใช้ guild_id เป็น key
+broadcast_channels = {}
 
 def add_broadcast_channel(guild_id: str, channel_id: int):
-    if guild_id not in broadcast_rooms:
-        broadcast_rooms[guild_id] = set()
-    broadcast_rooms[guild_id].add(channel_id)
+    if guild_id not in broadcast_channels:
+        broadcast_channels[guild_id] = set()
+    broadcast_channels[guild_id].add(channel_id)
 
 def remove_broadcast_channel(guild_id: str, channel_id: int):
-    if guild_id in broadcast_rooms and channel_id in broadcast_rooms[guild_id]:
-        broadcast_rooms[guild_id].remove(channel_id)
+    if guild_id in broadcast_channels and channel_id in broadcast_channels[guild_id]:
+        broadcast_channels[guild_id].remove(channel_id)
+
+def get_rooms(guild_id: str):
+    return list(broadcast_channels.get(guild_id, []))  # คืนค่าลิสต์ห้องที่ตั้งค่าไว้
