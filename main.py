@@ -35,7 +35,7 @@ async def lock_thread_after_delay(thread: discord.Thread):
         print(f"Thread {thread.name} not found, it might be deleted.")
     except discord.Forbidden:
         print(f"Bot lacks permission to lock thread {thread.name}.")
-        
+
 @bot.tree.command(name="broadcast_setting", description="ตั้งค่าห้องบอร์ดแคสต์")
 @app_commands.describe(
     action="เลือกการกระทำ (Add หรือ Remove)",
@@ -77,6 +77,7 @@ async def broadcast(
     )
 
     try:
+        guild_id = str(interaction.guild_id)  # ดึง ID ของเซิร์ฟเวอร์
         if mode == BroadcastMode.STANDARD:
             if not room:
                 await interaction.response.send_message("กรุณาเลือกห้อง", ephemeral=True)
@@ -93,15 +94,15 @@ async def broadcast(
             await interaction.response.send_message(f"📢 Broadcast sent to {room}", ephemeral=True)
 
         elif mode == BroadcastMode.MULTI:
-            broadcast_rooms = db.get_rooms()
+            broadcast_rooms = db.get_rooms(guild_id)  # ดึงห้องที่ตั้งค่าไว้จากฐานข้อมูล
 
             if not broadcast_rooms:
                 await interaction.response.send_message("ไม่มีห้องที่ตั้งค่าไว้สำหรับ Multi Broadcast", ephemeral=True)
                 return
 
             found_channels = [
-                discord.utils.get(interaction.guild.text_channels, name=room_name.lower())
-                for room_name in broadcast_rooms
+                discord.utils.get(interaction.guild.text_channels, id=int(room_id))
+                for room_id in broadcast_rooms
             ]
             found_channels = [ch for ch in found_channels if ch]
 
@@ -114,7 +115,7 @@ async def broadcast(
                 thread = await msg.create_thread(name=f"{boss_name.value} Discussion")
                 bot.loop.create_task(lock_thread_after_delay(thread))
 
-            await interaction.response.send_message(f"📢 Broadcast sent to {', '.join([ch.name for ch in found_channels])}", ephemeral=True)
+            await interaction.response.send_message(f"📢 Broadcast sent to {', '.join([ch.mention for ch in found_channels])}", ephemeral=True)
 
     except Exception as e:
         await interaction.response.send_message("เกิดข้อผิดพลาดในการส่งข้อความ", ephemeral=True)
