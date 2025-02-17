@@ -1,12 +1,12 @@
 import os
-import asyncio
 import discord
-from discord import app_commands
 from discord.ext import commands
+from discord import app_commands
 from database import db
-from enumOptions import BossName, BroadcastMode, Owner, OWNER_ICONS
+import asyncio
 
 from myserver import server_on
+from enumOptions import BossName, BroadcastMode, Owner, OWNER_ICONS
 
 intents = discord.Intents.default()
 intents.messages = True  # ✅ เปิดการอ่านข้อความ
@@ -16,13 +16,12 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # //////////////////////////// event ////////////////////////////
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
+    print("Bot Online!")
     try:
-        bot.tree.clear_commands(guild=None)  # ล้างคำสั่งเก่าก่อน
-        synced = await bot.tree.sync()  # ซิงก์คำสั่งใหม่
-        print(f"Synced {len(synced)} commands")
+        synced = await bot.tree.sync()
+        print(f"✅ Synced {len(synced)} commands")
     except Exception as e:
-        print(f"Sync error: {e}")
+        print(f"❌ Error syncing commands: {e}")
 # //////////////////////////// broadcast ////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง"""
@@ -34,7 +33,7 @@ async def lock_thread_after_delay(thread: discord.Thread):
     except discord.Forbidden:
         print(f"Bot lacks permission to lock thread {thread.name}.")
 
-@app_commands.command(name="broadcast", description="ส่งข้อความบอร์ดแคสต์")
+@bot.tree.command(name="broadcast", description="ส่งข้อความบอร์ดแคสต์")
 async def broadcast(
     interaction: discord.Interaction,
     mode: BroadcastMode,
