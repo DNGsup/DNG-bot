@@ -120,7 +120,7 @@ async def broadcast(
         print(f"Error in broadcast: {e}")
 # //////////////////////////// notifications ////////////////////////////
 # เรียกใช้งาน scheduler
-bot.loop.create_task(schedule_boss_notifications(bot))
+asyncio.create_task(schedule_boss_notifications(bot))
 
 @bot.tree.command(name="notifications", description="จัดการระบบแจ้งเตือนบอส")
 @app_commands.describe(action="เลือกการกระทำ", option="เลือกประเภทของการตั้งค่า")
