@@ -26,19 +26,21 @@ async def schedule_boss_notifications(bot):
             role_mention = f"<@&{settings['role']}>" if settings["role"] else ""
 
             for boss in notifications:
-                spawn_time = now.replace(hour=boss["hours"], minute=boss["minutes"], second=0)
+                spawn_time = now.replace(hour=boss["spawn_time"] // 60, minute=boss["spawn_time"] % 60, second=0)
                 time_until_spawn = (spawn_time - now).total_seconds()
                 time_before_five_min = max(time_until_spawn - 300, 0)
 
                 if time_until_spawn > 0:
                     await asyncio.sleep(time_before_five_min)
+
                     embed = discord.Embed(
                         title="𝐁𝐨𝐬𝐬 𝐍𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧!!",
                         description=f"{OWNER_ICONS.get(boss['owner'], '❓')} 𝐁𝐨𝐬𝐬 {boss['boss_name']} 𝐢𝐬 𝐬𝐩𝐚𝐰𝐧𝐢𝐧𝐠 𝐢𝐧 𝟓 𝐦𝐢𝐧𝐮𝐭𝐞𝐬! {role_mention}",
                         color=discord.Color.yellow()
                     )
                     await room.send(embed=embed)
-                    await asyncio.sleep(300)
+
+                    await asyncio.sleep(300)  # รอจนถึงเวลาบอสเกิด
 
                     embed = discord.Embed(
                         title="𝐁𝐨𝐬𝐬 𝐡𝐚𝐬 𝐬𝐩𝐚𝐰𝐧!!",
@@ -46,11 +48,13 @@ async def schedule_boss_notifications(bot):
                         color=discord.Color.red()
                     )
                     await room.send(embed=embed)
+
                     remove_boss_notification(guild_id, boss["boss_name"])
                     await asyncio.sleep(2)
 
         await asyncio.sleep(60)  # ตรวจสอบทุกๆ 1 นาที
 
+# ------------------------------------------------------------
 class ConfirmView(discord.ui.View):
     def __init__(self, embed, guild_id):
         super().__init__(timeout=60)
