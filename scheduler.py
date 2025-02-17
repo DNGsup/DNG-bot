@@ -2,7 +2,8 @@ import asyncio
 import datetime
 import pytz
 import discord
-from discord.ext import tasks
+
+from discord.ui import View, Button
 from database import get_boss_notifications, get_notification_settings, remove_boss_notification
 from enumOptions import OWNER_ICONS
 
@@ -49,3 +50,26 @@ async def schedule_boss_notifications(bot):
                     await asyncio.sleep(2)
 
         await asyncio.sleep(60)  # ตรวจสอบทุกๆ 1 นาที
+
+class ConfirmView(discord.ui.View):
+    def __init__(self, embed, guild_id):
+        super().__init__(timeout=60)
+        self.embed = embed
+        self.guild_id = guild_id
+
+    @discord.ui.Button(label="📢 ประกาศ", style=discord.ButtonStyle.green)
+    async def announce(self, interaction: discord.Interaction, Button: discord.ui.Button):
+        await interaction.response.defer()
+
+        settings = get_notification_settings(self.guild_id)
+        if not settings["room"]:
+            return await interaction.followup.send("❌ ยังไม่ได้ตั้งค่าห้องแจ้งเตือนบอส!", ephemeral=True)
+
+        channel = interaction.guild.get_channel(settings["room"])
+        if not channel:
+            return await interaction.followup.send("❌ ไม่พบช่องแจ้งเตือน!", ephemeral=True)
+
+        role_mention = f"<@&{settings['role']}>" if settings["role"] else "@everyone"
+
+        await channel.send(f"📢 **【𝐓𝐢𝐦𝐞 𝐢𝐧 𝐠𝐚𝐦𝐞 + 𝟏𝐡𝐫】** {role_mention}", embed=self.embed)
+        await interaction.followup.send("✅ ประกาศไปที่ห้องแจ้งเตือนเรียบร้อย!", ephemeral=True)
