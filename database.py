@@ -35,3 +35,15 @@ class Database:
         return self.data["broadcast_rooms"]
 
 db = Database()
+
+# ใช้ dictionary หรือ database ตามที่คุณใช้เก็บค่าห้องบอร์ดแคสต์
+broadcast_rooms = {}
+
+def add_broadcast_channel(guild_id: str, channel_id: int):
+    if guild_id not in broadcast_rooms:
+        broadcast_rooms[guild_id] = set()
+    broadcast_rooms[guild_id].add(channel_id)
+
+def remove_broadcast_channel(guild_id: str, channel_id: int):
+    if guild_id in broadcast_rooms and channel_id in broadcast_rooms[guild_id]:
+        broadcast_rooms[guild_id].remove(channel_id)
