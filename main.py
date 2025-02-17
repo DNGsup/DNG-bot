@@ -3,11 +3,12 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import asyncio
+import pytz
 
 from myserver import server_on
 from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS ,NotificationAction ,NotificationType
 from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
-from database import set_notification_room ,set_notification_role ,add_boss_notification ,remove_boss_notification ,get_boss_notifications
+from database import set_notification_room ,set_notification_role ,add_boss_notification ,remove_boss_notification ,get_boss_notifications ,get_notification_settings
 from scheduler import schedule_boss_notifications ,ConfirmView
 
 intents = discord.Intents.default()
@@ -122,12 +123,22 @@ async def broadcast(
 # เรียกใช้งาน scheduler
 asyncio.create_task(schedule_boss_notifications(bot))
 
+local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งค่า Timezone เป็นไทย
+
 @bot.tree.command(name="notifications", description="จัดการระบบแจ้งเตือนบอส")
 @app_commands.describe(action="เลือกการกระทำ", option="เลือกประเภทของการตั้งค่า")
-async def notifications(interaction: discord.Interaction, action: NotificationAction, option: NotificationType = None,
-                        value: str = None, boss_name: BossName = None, hours: int = None, minutes: int = None,
-                        owner: Owner = None):
+async def notifications(
+    interaction: discord.Interaction,
+    action: NotificationAction,
+    option: NotificationType = None,
+    value: str = None,
+    boss_name: BossName = None,
+    hours: int = None,
+    minutes: int = None,
+    owner: Owner = None
+):
     guild_id = str(interaction.guild_id)
+    settings = get_notification_settings(guild_id)
 
     if action == NotificationAction.ADD:
         if option == NotificationType.ROOM:
@@ -138,30 +149,33 @@ async def notifications(interaction: discord.Interaction, action: NotificationAc
             set_notification_role(guild_id, int(value))
             await interaction.response.send_message(f"✅ ตั้งค่าโรลแจ้งเตือนเป็น <@&{value}>", ephemeral=True)
 
+        elif option == NotificationType.NOTI:
+            if not settings["room"] or not settings["role"]:
+                return await interaction.response.send_message("❌ โปรดตั้งค่าห้องและโรลแจ้งเตือนก่อน!", ephemeral=True)
+
+            add_boss_notification(guild_id, boss_name.value, hours, minutes, owner.value)
+            await interaction.response.send_message(
+                f"✅ เพิ่มแจ้งเตือน {boss_name.value} เวลา {hours:02}:{minutes:02}", ephemeral=True
+            )
+
     elif action == NotificationAction.DEL:
         remove_boss_notification(guild_id, boss_name.value)
         await interaction.response.send_message(f"✅ ลบแจ้งเตือนของ {boss_name.value}", ephemeral=True)
 
-    elif action == NotificationAction.NOTI:
-        add_boss_notification(guild_id, boss_name.value, hours, minutes, owner.value)
-        await interaction.response.send_message(f"✅ เพิ่มแจ้งเตือน {boss_name.value} ที่ {hours:02}:{minutes:02}",
-                                                ephemeral=True)
     elif action == NotificationAction.LIST:
         notifications = get_boss_notifications(guild_id)
         if not notifications:
-            await interaction.response.send_message("❌ ไม่มีรายการแจ้งเตือนบอส", ephemeral=True)
-            return
+            return await interaction.response.send_message("❌ ไม่มีรายการแจ้งเตือนบอส", ephemeral=True)
 
         embed = discord.Embed(title="📜 𝐁𝐨𝐬𝐬 𝐒𝐩𝐚𝐰𝐧 𝐋𝐢𝐬𝐭", color=discord.Color.blue())
         for idx, noti in enumerate(notifications, 1):
             embed.add_field(
                 name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{noti['boss_name']} 𝐎𝐰𝐧𝐞𝐫 ﹕{noti['owner']}",
-                value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{noti['spawn_time']}",
+                value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{noti['spawn_time']} น.",
                 inline=False
             )
 
-        view = ConfirmView(embed, guild_id)  # ✅ เพิ่มปุ่ม "📢 ประกาศ"
-
+        view = ConfirmView(embed, guild_id)
         await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 # ------------------------------------------------------------------------------------------
 server_on()
