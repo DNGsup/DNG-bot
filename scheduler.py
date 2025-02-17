@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import pytz
 import discord
-
 from discord.ui import View, Button
 from database import get_boss_notifications, get_notification_settings, remove_boss_notification
 from enumOptions import OWNER_ICONS
