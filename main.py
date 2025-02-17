@@ -6,7 +6,7 @@ import asyncio
 import pytz
 
 from myserver import server_on
-from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS ,NotificationSettingType 
+from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS ,NotificationSettingType
 from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
 from database import set_notification_room ,set_notification_role ,add_boss_notification ,remove_boss_notification ,get_boss_notifications ,get_notification_settings
 from scheduler import schedule_boss_notifications ,ConfirmView
@@ -119,7 +119,6 @@ async def broadcast(
     except Exception as e:
         await interaction.response.send_message("เกิดข้อผิดพลาดในการส่งข้อความ", ephemeral=True)
         print(f"Error in broadcast: {e}")
-        
 # //////////////////////////// notifications ////////////////////////////
 local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งค่า Timezone เป็นไทย
 
@@ -147,46 +146,45 @@ async def notifications_setting(
     else:
         await interaction.response.send_message("❌ ค่าที่ป้อนไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง", ephemeral=True)
 
-    @bot.tree.command(name="notifications", description="เพิ่มการแจ้งเตือนบอส")
-    @app_commands.describe(boss_name="เลือกบอส", date="เลือกวันที่", hour="เลือกชั่วโมง", minute="เลือกนาที",
-                           owner="เลือกเจ้าของ")
-    async def notifications(
-            interaction: discord.Interaction,
-            boss_name: BossName,
-            date: str,
-            hour: int,
-            minute: int,
-            owner: Owner
-    ):
-        guild_id = str(interaction.guild_id)
-        settings = get_notification_settings(guild_id)
+@bot.tree.command(name="notifications", description="เพิ่มการแจ้งเตือนบอส")
+@app_commands.describe(boss_name="เลือกบอส", date="เลือกวันที่", hour="เลือกชั่วโมง", minute="เลือกนาที",
+                        owner="เลือกเจ้าของ")
+async def notifications(
+        interaction: discord.Interaction,
+        boss_name: BossName,
+        date: str,
+        hour: int,
+        minute: int,
+        owner: Owner
+):
+    guild_id = str(interaction.guild_id)
+    settings = get_notification_settings(guild_id)
 
-        if not settings["room"] or not settings["role"]:
-            return await interaction.response.send_message("❌ โปรดตั้งค่าห้องและโรลแจ้งเตือนก่อน!", ephemeral=True)
+    if not settings["room"] or not settings["role"]:
+        return await interaction.response.send_message("❌ โปรดตั้งค่าห้องและโรลแจ้งเตือนก่อน!", ephemeral=True)
 
-        add_boss_notification(guild_id, boss_name.value, date, hour, minute, owner.value)
-        await interaction.response.send_message(
-            f"✅ เพิ่มแจ้งเตือน {boss_name.value} วันที่ {date} เวลา {hour:02}:{minute:02}", ephemeral=True
+    add_boss_notification(guild_id, boss_name.value, date, hour, minute, owner.value)
+    await interaction.response.send_message(
+        f"✅ เพิ่มแจ้งเตือน {boss_name.value} วันที่ {date} เวลา {hour:02}:{minute:02}", ephemeral=True
+    )
+
+@bot.tree.command(name="lists", description="แสดงรายการแจ้งเตือนบอสทั้งหมด")
+async def lists(interaction: discord.Interaction):
+    guild_id = str(interaction.guild_id)
+    notifications = get_boss_notifications(guild_id)
+
+    if not notifications:
+        return await interaction.response.send_message("❌ ไม่มีรายการแจ้งเตือนบอส", ephemeral=True)
+
+    embed = discord.Embed(title="📜 𝐁𝐨𝐬𝐬 𝐒𝐩𝐚𝐰𝐧 𝐋𝐢𝐬𝐭", color=discord.Color.blue())
+    for idx, noti in enumerate(notifications, 1):
+        embed.add_field(
+            name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{noti['boss_name']} 𝐎𝐰𝐧𝐞𝐫 ﹕{noti['owner']}",
+            value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{noti['date']} {noti['spawn_time']} น.",
+            inline=False
         )
-
-    @bot.tree.command(name="lists", description="แสดงรายการแจ้งเตือนบอสทั้งหมด")
-    async def lists(interaction: discord.Interaction):
-        guild_id = str(interaction.guild_id)
-        notifications = get_boss_notifications(guild_id)
-
-        if not notifications:
-            return await interaction.response.send_message("❌ ไม่มีรายการแจ้งเตือนบอส", ephemeral=True)
-
-        embed = discord.Embed(title="📜 𝐁𝐨𝐬𝐬 𝐒𝐩𝐚𝐰𝐧 𝐋𝐢𝐬𝐭", color=discord.Color.blue())
-        for idx, noti in enumerate(notifications, 1):
-            embed.add_field(
-                name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{noti['boss_name']} 𝐎𝐰𝐧𝐞𝐫 ﹕{noti['owner']}",
-                value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{noti['date']} {noti['spawn_time']} น.",
-                inline=False
-            )
-            
-        view = ConfirmView(embed, guild_id)
-        await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
+    view = ConfirmView(embed, guild_id)
+    await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 # ------------------------------------------------------------------------------------------
 server_on()
 bot.run(os.getenv('TOKEN'))
