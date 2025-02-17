@@ -33,12 +33,7 @@ class BroadcastMode(Enum):
     STANDARD = "standard"
     MULTI = "multi"
 
-class NotificationAction(Enum):
-    ADD = "add"
-    DEL = "del"
-    NOTI = "noti"
-    LIST = "list"
-
-class NotificationType(Enum):
+class NotificationSettingType(Enum):
     ROOM = "room"
     ROLE = "role"
+    DEL = "del"
