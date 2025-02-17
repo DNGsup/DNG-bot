@@ -6,7 +6,7 @@ import asyncio
 import pytz
 
 from myserver import server_on
-from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS ,NotificationAction ,NotificationType
+from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS ,NotificationSettingType 
 from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
 from database import set_notification_room ,set_notification_role ,add_boss_notification ,remove_boss_notification ,get_boss_notifications ,get_notification_settings
 from scheduler import schedule_boss_notifications ,ConfirmView
@@ -119,48 +119,61 @@ async def broadcast(
     except Exception as e:
         await interaction.response.send_message("เกิดข้อผิดพลาดในการส่งข้อความ", ephemeral=True)
         print(f"Error in broadcast: {e}")
+        
 # //////////////////////////// notifications ////////////////////////////
 local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งค่า Timezone เป็นไทย
 
-@bot.tree.command(name="notifications", description="จัดการระบบแจ้งเตือนบอส")
-@app_commands.describe(action="เลือกการกระทำ", option="เลือกประเภทของการตั้งค่า")
-async def notifications(
-    interaction: discord.Interaction,
-    action: NotificationAction,
-    option: NotificationType = None,
-    value: str = None,
-    boss_name: BossName = None,
-    hours: int = None,
-    minutes: int = None,
-    owner: Owner = None
+@bot.tree.command(name="notifications_setting", description="ตั้งค่าห้อง, โรล และลบบอสจากการแจ้งเตือน")
+@app_commands.describe(setting_type="เลือกประเภทการตั้งค่า", value="เลือกค่าที่ต้องการตั้งหรือลบ")
+async def notifications_setting(
+        interaction: discord.Interaction,
+        setting_type: NotificationSettingType,
+        value: discord.abc.GuildChannel | discord.Role | BossName
 ):
     guild_id = str(interaction.guild_id)
-    settings = get_notification_settings(guild_id)
 
-    if action == NotificationAction.ADD:
-        if option == NotificationType.ROOM:
-            set_notification_room(guild_id, int(value))
-            await interaction.response.send_message(f"✅ ตั้งค่าห้องแจ้งเตือนเป็น <#{value}>", ephemeral=True)
+    if setting_type == NotificationSettingType.ROOM and isinstance(value, discord.TextChannel):
+        set_notification_room(guild_id, value.id)
+        await interaction.response.send_message(f"✅ ตั้งค่าห้องแจ้งเตือนเป็น {value.mention}", ephemeral=True)
 
-        elif option == NotificationType.ROLE:
-            set_notification_role(guild_id, int(value))
-            await interaction.response.send_message(f"✅ ตั้งค่าโรลแจ้งเตือนเป็น <@&{value}>", ephemeral=True)
+    elif setting_type == NotificationSettingType.ROLE and isinstance(value, discord.Role):
+        set_notification_role(guild_id, value.id)
+        await interaction.response.send_message(f"✅ ตั้งค่าโรลแจ้งเตือนเป็น {value.mention}", ephemeral=True)
 
-        elif option == NotificationType.NOTI:
-            if not settings["room"] or not settings["role"]:
-                return await interaction.response.send_message("❌ โปรดตั้งค่าห้องและโรลแจ้งเตือนก่อน!", ephemeral=True)
+    elif setting_type == NotificationSettingType.DEL and isinstance(value, BossName):
+        remove_boss_notification(guild_id, value.value)
+        await interaction.response.send_message(f"✅ ลบการแจ้งเตือนของ {value.value}", ephemeral=True)
 
-            add_boss_notification(guild_id, boss_name.value, hours, minutes, owner.value)
-            await interaction.response.send_message(
-                f"✅ เพิ่มแจ้งเตือน {boss_name.value} เวลา {hours:02}:{minutes:02}", ephemeral=True
-            )
+    else:
+        await interaction.response.send_message("❌ ค่าที่ป้อนไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง", ephemeral=True)
 
-    elif action == NotificationAction.DEL:
-        remove_boss_notification(guild_id, boss_name.value)
-        await interaction.response.send_message(f"✅ ลบแจ้งเตือนของ {boss_name.value}", ephemeral=True)
+    @bot.tree.command(name="notifications", description="เพิ่มการแจ้งเตือนบอส")
+    @app_commands.describe(boss_name="เลือกบอส", date="เลือกวันที่", hour="เลือกชั่วโมง", minute="เลือกนาที",
+                           owner="เลือกเจ้าของ")
+    async def notifications(
+            interaction: discord.Interaction,
+            boss_name: BossName,
+            date: str,
+            hour: int,
+            minute: int,
+            owner: Owner
+    ):
+        guild_id = str(interaction.guild_id)
+        settings = get_notification_settings(guild_id)
 
-    elif action == NotificationAction.LIST:
+        if not settings["room"] or not settings["role"]:
+            return await interaction.response.send_message("❌ โปรดตั้งค่าห้องและโรลแจ้งเตือนก่อน!", ephemeral=True)
+
+        add_boss_notification(guild_id, boss_name.value, date, hour, minute, owner.value)
+        await interaction.response.send_message(
+            f"✅ เพิ่มแจ้งเตือน {boss_name.value} วันที่ {date} เวลา {hour:02}:{minute:02}", ephemeral=True
+        )
+
+    @bot.tree.command(name="lists", description="แสดงรายการแจ้งเตือนบอสทั้งหมด")
+    async def lists(interaction: discord.Interaction):
+        guild_id = str(interaction.guild_id)
         notifications = get_boss_notifications(guild_id)
+
         if not notifications:
             return await interaction.response.send_message("❌ ไม่มีรายการแจ้งเตือนบอส", ephemeral=True)
 
@@ -168,10 +181,10 @@ async def notifications(
         for idx, noti in enumerate(notifications, 1):
             embed.add_field(
                 name=f"{idx}. 𝐁𝐨𝐬𝐬 ﹕{noti['boss_name']} 𝐎𝐰𝐧𝐞𝐫 ﹕{noti['owner']}",
-                value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{noti['spawn_time']} น.",
+                value=f"𝐒𝐩𝐚𝐰𝐧 ﹕{noti['date']} {noti['spawn_time']} น.",
                 inline=False
             )
-
+            
         view = ConfirmView(embed, guild_id)
         await interaction.response.send_message(embed=embed, ephemeral=True, view=view)
 # ------------------------------------------------------------------------------------------
