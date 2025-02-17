@@ -6,7 +6,8 @@ from database import db
 import asyncio
 
 from myserver import server_on
-from enumOptions import BossName, BroadcastMode, Owner, OWNER_ICONS
+from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS
+from database import add_broadcast_channel, remove_broadcast_channel
 
 intents = discord.Intents.default()
 intents.messages = True  # ✅ เปิดการอ่านข้อความ
@@ -23,6 +24,8 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
 # //////////////////////////// broadcast ////////////////////////////
+
+
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง"""
     await asyncio.sleep(86400)
@@ -32,6 +35,26 @@ async def lock_thread_after_delay(thread: discord.Thread):
         print(f"Thread {thread.name} not found, it might be deleted.")
     except discord.Forbidden:
         print(f"Bot lacks permission to lock thread {thread.name}.")
+        
+@bot.tree.command(name="broadcast_setting", description="ตั้งค่าห้องบอร์ดแคสต์")
+@app_commands.describe(
+    action="เลือกการกระทำ (Add หรือ Remove)",
+    channel="เลือกห้องที่ต้องการตั้งค่า"
+)
+async def broadcast_setting(
+    interaction: discord.Interaction,
+    action: BroadcastSettingAction,
+    channel: discord.TextChannel
+):
+    guild_id = str(interaction.guild_id)
+
+    if action == BroadcastSettingAction.ADD:
+        add_broadcast_channel(guild_id, channel.id)
+        await interaction.response.send_message(f"✅ เพิ่มห้อง {channel.mention} เข้าสู่รายการบอร์ดแคสต์!", ephemeral=True)
+
+    elif action == BroadcastSettingAction.REMOVE:
+        remove_broadcast_channel(guild_id, channel.id)
+        await interaction.response.send_message(f"✅ ลบห้อง {channel.mention} ออกจากรายการบอร์ดแคสต์!", ephemeral=True)
 
 @bot.tree.command(name="broadcast", description="ส่งข้อความบอร์ดแคสต์")
 async def broadcast(
