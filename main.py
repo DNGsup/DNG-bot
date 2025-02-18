@@ -122,28 +122,19 @@ async def broadcast(
 # //////////////////////////// notifications ////////////////////////////
 local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งค่า Timezone เป็นไทย
 
-@bot.tree.command(name="notifications_setting", description="ตั้งค่าห้อง, โรล และลบบอสจากการแจ้งเตือน")
-@app_commands.describe(setting_type="เลือกประเภทการตั้งค่า", value="เลือกค่าที่ต้องการตั้งหรือลบ")
-async def notifications_setting(
-        interaction: discord.Interaction,
-        setting_type: NotificationSettingType,
-        value: discord.abc.GuildChannel | discord.Role
-):
+@bot.tree.command(name="notification_room", description="ตั้งค่าห้องแจ้งเตือนบอส")
+@app_commands.describe(channel="เลือกห้องสำหรับแจ้งเตือน")
+async def notification_room(interaction: discord.Interaction, channel: discord.TextChannel):
     guild_id = str(interaction.guild.id)  # ดึงค่า guild ID
+    set_notification_room(guild_id, channel.id)  # บันทึกค่าห้องลง database
+    await interaction.response.send_message(f"✅ ตั้งค่าห้องแจ้งเตือนเป็น: {channel.mention}")
 
-    if setting_type == NotificationSettingType.ROOM:
-        if isinstance(value, discord.TextChannel):
-            set_notification_room(guild_id, value.id)  # บันทึกค่าห้องลง database
-            await interaction.response.send_message(f"✅ ตั้งค่าห้องแจ้งเตือนเป็น: {value.mention}")
-        else:
-            await interaction.response.send_message(f"⚠️ โปรดเลือกห้องสำหรับแจ้งเตือน!", ephemeral=True)
-
-    elif setting_type == NotificationSettingType.ROLE:
-        if isinstance(value, discord.Role):
-            set_notification_role(guild_id, value.id)  # บันทึกค่าโรลลง database
-            await interaction.response.send_message(f"✅ ตั้งค่าโรลแจ้งเตือนเป็น: {value.mention}")
-        else:
-            await interaction.response.send_message(f"⚠️ โปรดเลือกโรลแจ้งเตือน!", ephemeral=True)
+@bot.tree.command(name="notification_role", description="ตั้งค่าโรลแจ้งเตือนบอส")
+@app_commands.describe(role="เลือกโรลสำหรับแจ้งเตือน")
+async def notification_role(interaction: discord.Interaction, role: discord.Role):
+    guild_id = str(interaction.guild.id)  # ดึงค่า guild ID
+    set_notification_role(guild_id, role.id)  # บันทึกค่าโรลลง database
+    await interaction.response.send_message(f"✅ ตั้งค่าโรลแจ้งเตือนเป็น: {role.mention}")
 
 @bot.tree.command(name="notifications_del", description="ลบการแจ้งเตือนบอสออกจากรายการ")
 @app_commands.describe(boss_name="เลือกชื่อบอสที่ต้องการลบ")
