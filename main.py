@@ -125,26 +125,36 @@ local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งค่า Timezone เ�
 @bot.tree.command(name="notifications_setting", description="ตั้งค่าห้อง, โรล และลบบอสจากการแจ้งเตือน")
 @app_commands.describe(setting_type="เลือกประเภทการตั้งค่า", value="เลือกค่าที่ต้องการตั้งหรือลบ")
 async def notifications_setting(
-        interaction: discord.Interaction,
-        setting_type: NotificationSettingType,
-        value: discord.abc.GuildChannel | discord.Role | BossName
+    interaction: discord.Interaction,
+    setting_type: NotificationSettingType,
+    value: str  # ใช้เป็น str เพื่อรองรับทุกกรณี แล้วเราค่อยแปลงค่าเอง
 ):
-    guild_id = str(interaction.guild_id)
+    if setting_type == NotificationSettingType.ROOM:
+        # แปลงค่าเป็น TextChannel
+        channel = discord.utils.get(interaction.guild.channels, name=value)
+        if isinstance(channel, discord.TextChannel):
+            await interaction.response.send_message(f"✅ Room set to: {channel.name}")
+        else:
+            await interaction.response.send_message(f"⚠️ Room '{value}' not found!")
 
-    if setting_type == NotificationSettingType.ROOM and isinstance(value, discord.TextChannel):
-        set_notification_room(guild_id, value.id)
-        await interaction.response.send_message(f"✅ ตั้งค่าห้องแจ้งเตือนเป็น {value.mention}", ephemeral=True)
+    elif setting_type == NotificationSettingType.ROLE:
+        # แปลงค่าเป็น Role
+        role = discord.utils.get(interaction.guild.roles, name=value)
+        if role:
+            await interaction.response.send_message(f"✅ Role set to: {role.name}")
+        else:
+            await interaction.response.send_message(f"⚠️ Role '{value}' not found!")
 
-    elif setting_type == NotificationSettingType.ROLE and isinstance(value, discord.Role):
-        set_notification_role(guild_id, value.id)
-        await interaction.response.send_message(f"✅ ตั้งค่าโรลแจ้งเตือนเป็น {value.mention}", ephemeral=True)
-
-    elif setting_type == NotificationSettingType.DEL and isinstance(value, BossName):
-        remove_boss_notification(guild_id, value.value)
-        await interaction.response.send_message(f"✅ ลบการแจ้งเตือนของ {value.value}", ephemeral=True)
+    elif setting_type == NotificationSettingType.DEL:
+        # แปลงค่าเป็น BossName
+        try:
+            boss = BossName[value.upper()]
+            await interaction.response.send_message(f"✅ Boss set to: {boss.value}")
+        except KeyError:
+            await interaction.response.send_message(f"⚠️ Boss '{value}' not found!")
 
     else:
-        await interaction.response.send_message("❌ ค่าที่ป้อนไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง", ephemeral=True)
+        await interaction.response.send_message("⚠️ Invalid setting type!")
 
 @bot.tree.command(name="notifications", description="เพิ่มการแจ้งเตือนบอส")
 @app_commands.describe(boss_name="เลือกบอส", date="เลือกวันที่", hour="เลือกชั่วโมง", minute="เลือกนาที",
