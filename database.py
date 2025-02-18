@@ -4,7 +4,6 @@ broadcast_channels = {}
 notification_settings = {}
 # เก็บข้อมูลการแจ้งเตือนบอส
 boss_notifications = {}
-
 # -------------------------------------------------------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
     """เพิ่มช่องสำหรับ broadcast ในเซิร์ฟเวอร์ที่กำหนด (เก็บในหน่วยความจำเท่านั้น)"""
@@ -33,13 +32,14 @@ def set_notification_role(guild_id: str, role_id: int):
         notification_settings[guild_id] = {"room": None, "role": None}
     notification_settings[guild_id]["role"] = role_id
 
-def add_boss_notification(guild_id: str, boss_name: str, hours: int, minutes: int, owner: str):
+def add_boss_notification(guild_id: str, boss_name: str, date: str, hours: int, minutes: int, owner: str):
     """เพิ่มรายการแจ้งเตือนบอส"""
     if guild_id not in boss_notifications:
         boss_notifications[guild_id] = []
     spawn_time = (hours * 60) + minutes
     boss_notifications[guild_id].append({
         "boss_name": boss_name,
+        "date": date,
         "spawn_time": spawn_time,
         "owner": owner
     })
