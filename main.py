@@ -116,7 +116,7 @@ async def broadcast(
                 return
 
             msg = await room.send(embed=embed)
-            thread = await msg.create_thread(name=f"📌𝖡𝗈𝗌𝗌 {boss_name.value} 𝖣𝖺𝗍𝖾﹕{date} {hour:02}:{minute:02} ⤵")
+            thread = await msg.create_thread(name=f"📌𝖡𝗈𝗌𝗌 {boss_name.value} 𝖣𝖺𝗍𝖾﹕{date} {hour:02}:{minute:02}")
             bot.loop.create_task(lock_thread_after_delay(thread))
             await interaction.followup.send(f"📢 Broadcast sent to {room.mention}", ephemeral=True)
 
@@ -139,7 +139,7 @@ async def broadcast(
 
             for channel in found_channels:
                 msg = await channel.send(embed=embed)
-                thread = await msg.create_thread(name=f"📌𝖡𝗈𝗌𝗌 {boss_name.value} 𝖣𝖺𝗍𝖾﹕{date} {hour:02}:{minute:02} ⤵")
+                thread = await msg.create_thread(name=f"📌𝖡𝗈𝗌𝗌 {boss_name.value} 𝖣𝖺𝗍𝖾﹕{date} {hour:02}:{minute:02}")
                 bot.loop.create_task(lock_thread_after_delay(thread))
 
             await interaction.followup.send(f"📢 Broadcast sent to {', '.join([ch.mention for ch in found_channels])}", ephemeral=True)
@@ -315,6 +315,8 @@ async def check_bp(interaction: discord.Interaction):
         await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
         return
 
+    await interaction.response.defer(thinking=True)  # ป้องกัน Timeout
+
     thread = interaction.channel
     user_bp = {}
 
@@ -336,8 +338,8 @@ async def check_bp(interaction: discord.Interaction):
     embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())
     for idx, (user_id, bp) in enumerate(sorted_bp, 1):
         member = interaction.guild.get_member(user_id)
-        mention = member.mention if member else f"<@{user_id}>"
-        embed.add_field(name=f"{idx}. {mention}", value=f"{bp} BP", inline=False)
+        mention = member.mention if member else f"<@!{user_id}>"
+        embed.add_field(name=f"{idx}. {mention}", value=f"╰ {bp} BP", inline=False)
     embed.set_footer(text=thread.name)
 
     if interaction.guild_id in bp_summary_room:
@@ -354,11 +356,12 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
     if not isinstance(interaction.channel, discord.Thread):
         await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
         return
+    await interaction.response.defer(thinking=True)  # ป้องกัน Timeout
 
     thread = interaction.channel
     bp_data[user.id] = bp_data.get(user.id, 0) + bp
-    embed = discord.Embed(title="💎 บวกคะแนน BP", color=discord.Color.blue())
-    embed.add_field(name=f"{user.mention}", value=f"{bp} BP", inline=False)
+
+    embed = discord.Embed(title="💎 บวกคะแนน BP", description=f"<@!{user.id}> : {bp} BP", color=discord.Color.blue())
     embed.set_footer(text=thread.name)
 
     if interaction.guild_id in bp_summary_room:
