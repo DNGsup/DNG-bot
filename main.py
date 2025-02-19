@@ -211,15 +211,14 @@ async def notification_list(interaction: discord.Interaction):
     guild_id = interaction.guild_id
     now = datetime.datetime.now(local_tz)
 
-    # ✅ ลบรายการบอสที่เกิดไปแล้ว
-    if guild_id in boss_notifications:
-        # ลบการแจ้งเตือนบอสที่ spawn_time ผ่านมาแล้ว
-        boss_notifications[guild_id] = [
-            notif for notif in boss_notifications[guild_id]
-            if notif["spawn_time"] > now  # เก็บเฉพาะรายการที่ยังไม่เกิด
-        ]
-
-    if guild_id not in boss_notifications or not boss_notifications[guild_id]:
+    # ✅ แทนที่การลบจริงด้วยการสร้างตัวแปรใหม่เพื่อแสดงผล
+    active_notifications = [
+        notif for notif in boss_notifications.get(guild_id, [])
+        if notif["spawn_time"] > now
+    ]
+    print(f"[DEBUG] notification_list - Found {len(active_notifications)} active notifications")
+    
+    if not active_notifications:
         return await interaction.followup.send("❌ ไม่มีบอสที่ถูกตั้งค่าแจ้งเตือน", ephemeral=True)
 
     sorted_notifications = sorted(boss_notifications[guild_id], key=lambda x: x["spawn_time"])
