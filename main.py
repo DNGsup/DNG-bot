@@ -336,10 +336,18 @@ async def check_bp(interaction: discord.Interaction):
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1], reverse=True)
     embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())
+
+    description = ""
     for idx, (user_id, bp) in enumerate(sorted_bp, 1):
         member = interaction.guild.get_member(user_id)
         mention = member.mention if member else f"<@!{user_id}>"
-        embed.add_field(name=f"get {bp} BP", value=f"╰ to {mention}", inline=False)
+        description += (f"{idx}. {mention}\n"
+                        f"╰ {bp} BP\n\n")
+
+    embed.description = description.strip()  # ลบช่องว่างท้ายข้อความ
+    embed.set_footer(text=thread.name)
+
+    embed.description = description
     embed.set_footer(text=thread.name)
 
     if interaction.guild_id in bp_summary_room:
