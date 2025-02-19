@@ -77,8 +77,10 @@ async def broadcast(
         room: discord.TextChannel = None
 ):
     if not interaction.guild:
-        await interaction.response.send_message("คำสั่งนี้ใช้ได้เฉพาะในเซิร์ฟเวอร์เท่านั้น", ephemeral=True)
+        await interaction.followup.send("คำสั่งนี้ใช้ได้เฉพาะในเซิร์ฟเวอร์เท่านั้น", ephemeral=True)
         return
+
+    await interaction.response.defer(thinking=True)  # ✅ ป้องกัน Interaction หมดอายุ
 
     embed = discord.Embed(
         title=f" {OWNER_ICONS[owner.value]}・𝐁𝐨𝐬𝐬﹕{boss_name.value} 𝐃𝐚𝐭𝐞﹕{date} {hour:02}:{minute:02} ～✦",
@@ -96,13 +98,13 @@ async def broadcast(
             msg = await room.send(embed=embed)
             thread = await msg.create_thread(name=f"📌 {boss_name.value} ⤵")
             bot.loop.create_task(lock_thread_after_delay(thread))
-            await interaction.response.send_message(f"📢 Broadcast sent to {room.mention}", ephemeral=True)
+            await interaction.followup.send(f"📢 Broadcast sent to {room.mention}", ephemeral=True)
 
         elif mode == BroadcastMode.MULTI:
             broadcast_rooms = get_rooms(guild_id)
 
             if not broadcast_rooms:
-                await interaction.response.send_message("ไม่มีห้องที่ตั้งค่าไว้สำหรับ Multi Broadcast", ephemeral=True)
+                await interaction.followup.send("ไม่มีห้องที่ตั้งค่าไว้สำหรับ Multi Broadcast", ephemeral=True)
                 return
 
             found_channels = [
@@ -112,7 +114,7 @@ async def broadcast(
             found_channels = [ch for ch in found_channels if ch]
 
             if not found_channels:
-                await interaction.response.send_message("ไม่พบห้องใด ๆ ที่ตรงกับค่าที่ตั้งไว้", ephemeral=True)
+                await interaction.followup.send("ไม่พบห้องใด ๆ ที่ตรงกับค่าที่ตั้งไว้", ephemeral=True)
                 return
 
             for channel in found_channels:
@@ -120,12 +122,10 @@ async def broadcast(
                 thread = await msg.create_thread(name=f"📌 {boss_name.value} ⤵")
                 bot.loop.create_task(lock_thread_after_delay(thread))
 
-            await interaction.response.send_message(
-                f"📢 Broadcast sent to {', '.join([ch.mention for ch in found_channels])}", ephemeral=True
-            )
+            await interaction.followup.send(f"📢 Broadcast sent to {', '.join([ch.mention for ch in found_channels])}", ephemeral=True)
 
     except Exception as e:
-        await interaction.response.send_message("เกิดข้อผิดพลาดในการส่งข้อความ", ephemeral=True)
+        await interaction.followup.send("เกิดข้อผิดพลาดในการส่งข้อความ", ephemeral=True)
         print(f"Error in broadcast: {e}")
 # //////////////////////////// notifications ////////////////////////////
 # ----------- ระบบตั้งค่าห้องแจ้งเตือนเวลาบอส ✅ -----------
@@ -161,14 +161,13 @@ async def notification(
     await interaction.response.defer(ephemeral=True)
     guild_id = interaction.guild_id
 
-    # ใช้ role ที่ตั้งค่าไว้ ถ้าไม่มีให้ใช้ที่ส่งมา
-    if role is None:
-        role_id = notification_role.get(guild_id)
-        if role_id:
-            role = interaction.guild.get_role(role_id)
+    # ดึง role จาก database ถ้าไม่มีให้ใช้ค่าที่ส่งมา
+    role_id = notification_role.get(guild_id)
+    if role is None and role_id:
+        role = interaction.guild.get_role(role_id)  # ดึง role object
 
-    if role is None:  # ถ้ายังไม่มี role ให้แจ้งเตือน
-        return await interaction.followup.send("❌ ยังไม่ได้ตั้งค่า Role สำหรับแจ้งเตือนบอส!", ephemeral=True)
+    # ถ้าไม่มี role เลย ให้แท็ก @everyone แทน
+    role_mention = f"<@&{role.id}>" if role else "@everyone"
 
     now = datetime.datetime.now(local_tz)  # ✅ ใช้ timezone ที่กำหนด
     spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)
@@ -176,19 +175,20 @@ async def notification(
     if guild_id not in boss_notifications:
         boss_notifications[guild_id] = []
 
+
     boss_notifications[guild_id].append({
         "boss_name": boss_name.name,
         "spawn_time": spawn_time,
         "owner": owner.value,
-        "role": role.id  # ใช้ role ที่ดึงมา
+        "role": role.id if role else None  # ป้องกัน NoneType
     })
 
     await interaction.followup.send(
         f"ตั้งค่าแจ้งเตือนบอส {boss_name.value} เรียบร้อยแล้ว! จะเกิดในอีก {hours} ชั่วโมง {minutes} นาที.",
         ephemeral=True
     )
-
-    await schedule_boss_notifications(guild_id, boss_name.name, spawn_time, owner.value, role)
+    # เรียกใช้ฟังก์ชันโดยส่ง bot ไปด้วย
+    await schedule_boss_notifications(bot, guild_id, boss_name.name, spawn_time, owner.value, role)
 #-------- คำสั่งดูรายการบอสที่ตั้งค่าไว้ ✅-----------
 @bot.tree.command(name="notification_list", description="ดูรายการบอสที่ตั้งค่าแจ้งเตือน")
 async def notification_list(interaction: discord.Interaction):

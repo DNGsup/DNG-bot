@@ -26,6 +26,7 @@ async def schedule_boss_notifications(bot,guild_id, boss_name, spawn_time, owner
     if guild_id in notification_room:
         channel_id = notification_room[guild_id]
         channel = bot.get_channel(channel_id) or bot.get_channel(int(channel_id))
+
         if channel:
             embed = discord.Embed(
                 title="𝐁𝐨𝐬𝐬 𝐍𝐨𝐭𝐢𝐟𝐢𝐜𝐚𝐭𝐢𝐨𝐧!!",
