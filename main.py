@@ -5,7 +5,6 @@ from discord import app_commands
 import asyncio
 import pytz
 import datetime
-from database import load_data ,save_data
 from myserver import server_on
 from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS
 from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
@@ -21,19 +20,12 @@ local_tz = pytz.timezone('Asia/Bangkok')  # ใช้เวลาประเท
 # //////////////////////////// event ////////////////////////////
 @bot.event
 async def on_ready():
-    load_data()  # โหลดข้อมูล broadcast ตอนบอทออนไลน์
     print("Bot Online!")
-    print(f"✅ Loaded broadcast settings: {broadcast_channels}")
     try:
         synced = await bot.tree.sync()
         print(f"✅ Synced {len(synced)} commands")
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
-
-@bot.event
-async def on_disconnect():
-    save_data()  # บันทึกข้อมูลก่อนบอทปิดตัว
-    print("✅ Data saved before shutdown")
 # //////////////////////////// คำสั่งดูตั้งค่าของเซิร์ฟเวอร์ ////////////////////////////
 @bot.tree.command(name="server_settings", description="ดูการตั้งค่าของเซิร์ฟเวอร์")
 async def server_settings(interaction: discord.Interaction):
