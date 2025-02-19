@@ -34,6 +34,29 @@ async def on_ready():
 async def on_disconnect():
     save_data()  # บันทึกข้อมูลก่อนบอทปิดตัว
     print("✅ Data saved before shutdown")
+# //////////////////////////// คำสั่งดูตั้งค่าของเซิร์ฟเวอร์ ////////////////////////////
+@bot.tree.command(name="server_settings", description="ดูการตั้งค่าของเซิร์ฟเวอร์")
+async def server_settings(interaction: discord.Interaction):
+    guild_id = str(interaction.guild_id)
+
+    # ดึงข้อมูลของเซิร์ฟเวอร์นี้
+    broadcast_channels_list = broadcast_channels.get(guild_id, [])
+    notification_room_id = notification_room.get(guild_id)
+    notification_role_id = notification_role.get(guild_id)
+
+    # แปลง broadcast channels ให้เป็นข้อความ รองรับหลายช่อง
+    broadcast_channels_text = "\n".join([f"<#{channel_id}>" for channel_id in broadcast_channels_list]) if broadcast_channels_list else "❌ ไม่มีการตั้งค่าห้องบอร์ดแคสต์"
+    notification_room_text = f"<#{notification_room_id}>" if notification_room_id else "❌ ยังไม่ได้ตั้งค่าห้องแจ้งเตือนบอส"
+    notification_role_text = f"<@&{notification_role_id}>" if notification_role_id else "❌ ยังไม่ได้ตั้งค่า Role แจ้งเตือนบอส"
+
+    # Embed ข้อมูล
+    embed = discord.Embed(title="⚙️ Server Settings", color=discord.Color.blue())
+    embed.add_field(name="📢 Broadcast Channels", value=broadcast_channels_text, inline=False)
+    embed.add_field(name="🔔 Notification Room", value=notification_room_text, inline=False)
+    embed.add_field(name="👥 Notification Role", value=notification_role_text, inline=False)
+
+    # ส่ง embed กลับ
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง ค่าคือ (86400)"""

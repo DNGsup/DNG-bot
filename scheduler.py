@@ -4,8 +4,7 @@ from discord.ext import commands
 import pytz
 import datetime
 import asyncio
-from database import set_notification_room, set_notification_role
-from database import broadcast_channels, notification_room, notification_role, boss_notifications # แยก import ให้ชัดเจน
+from database import notification_room, notification_role # แยก import ให้ชัดเจน
 from enumOptions import BossName ,OWNER_ICONS ,Owner
 
 local_tz = pytz.timezone('Asia/Bangkok')  # ใช้เวลาประเทศไทย
@@ -51,7 +50,5 @@ async def schedule_boss_notifications(bot,guild_id, boss_name, spawn_time, owner
             )
             await channel.send(embed=embed)
 
-
 local_tz = pytz.timezone("Asia/Bangkok")  # ตั้งเวลาเป็นไทย
-
 # ///////////////////////////////////////////////////////////
