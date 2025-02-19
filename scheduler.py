@@ -5,7 +5,7 @@ import pytz
 import datetime
 import asyncio
 from database import boss_notifications ,notification_room ,notification_role
-from enumOptions import BossName
+from enumOptions import BossName ,OWNER_ICONS
 
 async def schedule_boss_notifications(bot,guild_id, boss_name, spawn_time, owner, role):
     now = datetime.datetime.now(local_tz)
@@ -14,16 +14,9 @@ async def schedule_boss_notifications(bot,guild_id, boss_name, spawn_time, owner
     intents.message_content = True  # ✅ เปิดการเข้าถึงเนื้อหาข้อความ
     notification_role[guild_id] = role.id  # บันทึก role.id ลง dictionary
     boss_display_name = BossName[boss_name].value
-
-    # กรองรายการบอสที่ยังไม่เกิด
-    valid_notifications = [
-        notif for notif in boss_notifications[guild_id]
-        if notif["spawn_time"] > now
-    ]
-
     time_until_spawn = (spawn_time - now).total_seconds()
     time_before_five_min = max(time_until_spawn - 300, 0)
-    owner_icon = "💙" if owner == "knight" else "💚"
+    owner_icon = OWNER_ICONS.get(owner.value, "❓")
 
     print(f"[DEBUG] Scheduling boss: {boss_name} at {spawn_time} (in {time_until_spawn}s)")
 
