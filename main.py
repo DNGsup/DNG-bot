@@ -7,10 +7,12 @@ import pytz
 import datetime
 from myserver import server_on
 from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS
+# แยก import ให้ชัดเจน
 from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
 from database import set_notification_room, set_notification_role
-from database import broadcast_channels, notification_room, notification_role, boss_notifications # แยก import ให้ชัดเจน
+from database import broadcast_channels, notification_room, notification_role, boss_notifications
 from scheduler import schedule_boss_notifications
+from database import bp_data, bp_reactions, bp_summary_room
 
 intents = discord.Intents.default()
 intents.messages = True  # ✅ เปิดการอ่านข้อความ
@@ -36,8 +38,11 @@ async def server_settings(interaction: discord.Interaction):
     notification_room_id = notification_room.get(guild_id)
     notification_role_id = notification_role.get(guild_id)
 
-    # แปลง broadcast channels ให้เป็นข้อความ รองรับหลายช่อง
-    broadcast_channels_text = "\n".join([f"<#{channel_id}>" for channel_id in broadcast_channels_list]) if broadcast_channels_list else "❌ ไม่มีการตั้งค่าห้องบอร์ดแคสต์"
+    # แปลง broadcast channels ให้เป็นข้อความ รองรับสูงสุด 5 ช่อง
+    if broadcast_channels_list:
+        broadcast_channels_text = "\n".join([f"<#{channel_id}>" for channel_id in broadcast_channels_list[:5]])
+    else:
+        broadcast_channels_text = "❌ ไม่มีการตั้งค่าห้องบอร์ดแคสต์"
     notification_room_text = f"<#{notification_room_id}>" if notification_room_id else "❌ ยังไม่ได้ตั้งค่าห้องแจ้งเตือนบอส"
     notification_role_text = f"<@&{notification_role_id}>" if notification_role_id else "❌ ยังไม่ได้ตั้งค่า Role แจ้งเตือนบอส"
 
@@ -52,7 +57,7 @@ async def server_settings(interaction: discord.Interaction):
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง ค่าคือ (86400)"""
-    await asyncio.sleep(10)
+    await asyncio.sleep(60)
     try:
         await thread.edit(locked=True)
     except discord.NotFound:
@@ -111,7 +116,7 @@ async def broadcast(
                 return
 
             msg = await room.send(embed=embed)
-            thread = await msg.create_thread(name=f"📌 {boss_name.value} ⤵")
+            thread = await msg.create_thread(name=f"📌 𝐁𝐨𝐬𝐬 {boss_name.value} 𝐃𝐚𝐭𝐞﹕{date} {hour:02}:{minute:02}⤵")
             bot.loop.create_task(lock_thread_after_delay(thread))
             await interaction.followup.send(f"📢 Broadcast sent to {room.mention}", ephemeral=True)
 
@@ -134,7 +139,7 @@ async def broadcast(
 
             for channel in found_channels:
                 msg = await channel.send(embed=embed)
-                thread = await msg.create_thread(name=f"📌 {boss_name.value} ⤵")
+                thread = await msg.create_thread(name=f"📌 𝐁𝐨𝐬𝐬 {boss_name.value} 𝐃𝐚𝐭𝐞﹕{date} {hour:02}:{minute:02}⤵")
                 bot.loop.create_task(lock_thread_after_delay(thread))
 
             await interaction.followup.send(f"📢 Broadcast sent to {', '.join([ch.mention for ch in found_channels])}", ephemeral=True)
@@ -146,7 +151,7 @@ async def broadcast(
 # ----------- ระบบตั้งค่าห้องแจ้งเตือนเวลาบอส ✅ -----------
 @bot.tree.command(name='noti_room', description='ตั้งค่าช่องสำหรับแจ้งเตือนบอส')
 async def noti_room(interaction: discord.Interaction, channel: discord.TextChannel):
-    guild_id = (interaction.guild_id)  # ✅ แปลงเป็น string เพื่อให้ตรงกับ database
+    guild_id = interaction.guild_id  # ✅ แปลงเป็น string เพื่อให้ตรงกับ database
     set_notification_room(guild_id, channel.id)  # ✅ ใช้ฟังก์ชันแทนการกำหนดค่าโดยตรง
     # ✅ ตอบกลับโดยตรง แทนการ defer()
     await interaction.response.send_message(
@@ -155,7 +160,7 @@ async def noti_room(interaction: discord.Interaction, channel: discord.TextChann
 # ----------- ตั้งค่า Role ที่ต้องการให้บอทแท็กในการแจ้งเตือนบอส ✅-----------
 @bot.tree.command(name="noti_role", description="ตั้งค่า Role สำหรับแจ้งเตือนบอส")
 async def noti_role(interaction: discord.Interaction, role: discord.Role):
-    guild_id = (interaction.guild_id)  # ✅ แปลงเป็น string
+    guild_id = interaction.guild_id  # ✅ แปลงเป็น string
     set_notification_role(guild_id, role.id)  # ✅ ใช้ฟังก์ชันแทนการกำหนดค่าโดยตรง
 
     await interaction.response.send_message(
@@ -182,7 +187,7 @@ async def remove_notification(interaction: discord.Interaction, boss_name: BossN
         await interaction.response.send_message(f"❌ ไม่พบการแจ้งเตือนของ {boss_name.value}", ephemeral=True)
     else:
         await interaction.response.send_message(f"✅ ลบการแจ้งเตือนของ {boss_name.value} เรียบร้อยแล้ว!", ephemeral=True)
-# ----------- ล้างรายการแจ้งเตือนบอสทั้งหมด -----------
+# ----------- ล้างรายการแจ้งเตือนบอสทั้งหมด ✅ -----------
 @bot.tree.command(name="clear_notifications", description="ล้างรายการแจ้งเตือนบอสทั้งหมด")
 async def clear_notifications(interaction: discord.Interaction):
     guild_id = interaction.guild_id  # ใช้ค่า guild_id ปัจจุบัน
@@ -203,8 +208,7 @@ async def notification(
         role: discord.Role = None  # ทำให้ role เป็น optional
 ):
     await interaction.response.defer(ephemeral=True)
-    guild_id = (interaction.guild_id)  # ✅ แปลงเป็น string
-
+    guild_id = interaction.guild_id  # ✅ แปลงเป็น string
     # ดึง role จาก database ถ้าไม่มีให้ใช้ค่าที่ส่งมา
     role_id = notification_role.get(guild_id)  # ✅ ดึงค่า Role จาก database
     if role is None and role_id:
@@ -271,7 +275,7 @@ async def notification_list(interaction: discord.Interaction):
             self.embed = embed_data  # ✅ ใช้ self.embed
 
         @discord.ui.button(label="📢 ประกาศ", style=discord.ButtonStyle.green)
-        async def announce(self, interaction: discord.Interaction, button: discord.ui.Button):
+        async def announce(self,interaction: discord.Interaction, button: discord.ui.Button):
             await interaction.response.defer()
 
             guild_id = interaction.guild_id
@@ -292,6 +296,66 @@ async def notification_list(interaction: discord.Interaction):
             await interaction.followup.send("✅ ประกาศไปที่ห้องแจ้งเตือนเรียบร้อย!", ephemeral=True)
 
     await interaction.followup.send(embed=embed, ephemeral=True, view=ConfirmView(embed))  # ✅ ส่ง Embed ไปพร้อมปุ่ม
+# //////////////////////////// check bp ////////////////////////////
+@bot.tree.command(name="set_bp", description="ตั้งค่าคะแนน BP ตามอีโมจิ")
+async def set_bp(interaction: discord.Interaction, emoji: str, points: int):
+    bp_reactions[emoji] = points
+    await interaction.response.send_message(f'ตั้งค่าคะแนนให้ {emoji} = {points} BP', ephemeral=True)
+
+@bot.tree.command(name="setting_bproom", description="ตั้งค่าห้องสำหรับสรุปคะแนน")
+async def setting_bproom(interaction: discord.Interaction, room: discord.TextChannel):
+    bp_summary_room[interaction.guild_id] = room.id
+    await interaction.response.send_message(f'ตั้งค่าห้องสรุปคะแนนเป็น {room.mention}', ephemeral=True)
+
+@bot.tree.command(name="check_bp",description="คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง")
+async def check_bp(interaction: discord.Interaction):
+    if not isinstance(interaction.channel, discord.Thread):
+        await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
+        return
+
+    thread = interaction.channel
+    user_bp = {}
+
+    async for message in thread.history(limit=None):
+        for reaction in message.reactions:
+            if str(reaction.emoji) in bp_reactions:
+                async for user in reaction.users():
+                    if user.bot:
+                        continue
+                    user_bp[user.id] = user_bp.get(user.id, 0) + bp_reactions[str(reaction.emoji)]
+
+    sorted_bp = sorted(user_bp.items(), key=lambda x: x[1], reverse=True)
+    summary = f'🏆 สรุปคะแนน BP {thread.name}\n'
+    for idx, (user_id, bp) in enumerate(sorted_bp, 1):
+        summary += f'{idx}. <@{user_id}> : {bp} BP\n'
+
+    if interaction.guild_id in bp_summary_room:
+        summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
+        if summary_channel:
+            await summary_channel.send(summary)
+        else:
+            await interaction.response.send_message('ไม่พบห้องที่ตั้งค่าไว้', ephemeral=True)
+    else:
+        await interaction.response.send_message('ยังไม่มีการตั้งค่าห้องสรุปคะแนน', ephemeral=True)
+
+@bot.tree.command(name="add_bp",description="เพิ่มคะแนน BP ให้สมาชิกในเธรดที่ใช้งานอยู่")
+async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int):
+    if not isinstance(interaction.channel, discord.Thread):
+        await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
+        return
+
+    thread = interaction.channel
+    bp_data[user.id] = bp_data.get(user.id, 0) + bp
+    summary = f'💎 บวกคะแนน BP {thread.name}\n<@{user.id}> : {bp} BP'
+
+    if interaction.guild_id in bp_summary_room:
+        summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
+        if summary_channel:
+            await summary_channel.send(summary)
+        else:
+            await interaction.response.send_message('ไม่พบห้องที่ตั้งค่าไว้', ephemeral=True)
+    else:
+        await interaction.response.send_message('ยังไม่มีการตั้งค่าห้องสรุปคะแนน', ephemeral=True)
 # ------------------------------------------------------------------------------------------
 server_on()
 bot.run(os.getenv('TOKEN'))
