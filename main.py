@@ -116,7 +116,7 @@ async def broadcast(
                 return
 
             msg = await room.send(embed=embed)
-            thread = await msg.create_thread(name=f"📌 𝐁𝐨𝐬𝐬 {boss_name.value} 𝐃𝐚𝐭𝐞﹕{date} {hour:02}:{minute:02}⤵")
+            thread = await msg.create_thread(name=f"📌𝖡𝗈𝗌𝗌 {boss_name.value} 𝖣𝖺𝗍𝖾﹕{date} {hour:02}:{minute:02} ⤵")
             bot.loop.create_task(lock_thread_after_delay(thread))
             await interaction.followup.send(f"📢 Broadcast sent to {room.mention}", ephemeral=True)
 
@@ -139,7 +139,7 @@ async def broadcast(
 
             for channel in found_channels:
                 msg = await channel.send(embed=embed)
-                thread = await msg.create_thread(name=f"📌 𝐁𝐨𝐬𝐬 {boss_name.value} 𝐃𝐚𝐭𝐞﹕{date} {hour:02}:{minute:02}⤵")
+                thread = await msg.create_thread(name=f"📌𝖡𝗈𝗌𝗌 {boss_name.value} 𝖣𝖺𝗍𝖾﹕{date} {hour:02}:{minute:02} ⤵")
                 bot.loop.create_task(lock_thread_after_delay(thread))
 
             await interaction.followup.send(f"📢 Broadcast sent to {', '.join([ch.mention for ch in found_channels])}", ephemeral=True)
@@ -333,14 +333,14 @@ async def check_bp(interaction: discord.Interaction):
                     user_bp[message.author.id] += bp_reactions[str(reaction.emoji)]
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1], reverse=True)
-    summary = f'🏆 สรุปคะแนน BP {thread.name}\n'
+    embed = discord.Embed(title=thread.name, description="🏆 สรุปคะแนน BP", color=discord.Color.gold())
     for idx, (user_id, bp) in enumerate(sorted_bp, 1):
-        summary += f'{idx}. <@{user_id}> : {bp} BP\n'
+        embed.add_field(name=f"{idx}. <@{user_id}>", value=f"{bp} BP", inline=False)
 
     if interaction.guild_id in bp_summary_room:
         summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
         if summary_channel:
-            await summary_channel.send(summary)
+            await summary_channel.send(embed=embed)
         else:
             await interaction.response.send_message('ไม่พบห้องที่ตั้งค่าไว้', ephemeral=True)
     else:
@@ -354,12 +354,13 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
 
     thread = interaction.channel
     bp_data[user.id] = bp_data.get(user.id, 0) + bp
-    summary = f'💎 บวกคะแนน BP {thread.name}\n<@{user.id}> : {bp} BP'
+    embed = discord.Embed(title=thread.name, description="💎 บวกคะแนน BP", color=discord.Color.blue())
+    embed.add_field(name=f"<@{user.id}>", value=f"{bp} BP", inline=False)
 
     if interaction.guild_id in bp_summary_room:
         summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
         if summary_channel:
-            await summary_channel.send(summary)
+            await summary_channel.send(embed=embed)
         else:
             await interaction.response.send_message('ไม่พบห้องที่ตั้งค่าไว้', ephemeral=True)
     else:
