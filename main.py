@@ -315,7 +315,7 @@ async def check_bp(interaction: discord.Interaction):
         await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
         return
 
-    await interaction.response.defer(thinking=True)  # ป้องกัน Timeout
+    await interaction.response.defer(thinking=True, ephemeral=True)
 
     thread = interaction.channel
     user_bp = {}
@@ -339,7 +339,7 @@ async def check_bp(interaction: discord.Interaction):
     for idx, (user_id, bp) in enumerate(sorted_bp, 1):
         member = interaction.guild.get_member(user_id)
         mention = member.mention if member else f"<@!{user_id}>"
-        embed.add_field(name=f"{idx}. {mention}", value=f"╰ {bp} BP", inline=False)
+        embed.add_field(name=f"get {bp} BP", value=f"╰ to {mention}", inline=False)
     embed.set_footer(text=thread.name)
 
     if interaction.guild_id in bp_summary_room:
@@ -356,7 +356,7 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
     if not isinstance(interaction.channel, discord.Thread):
         await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
         return
-    await interaction.response.defer(thinking=True)  # ป้องกัน Timeout
+    await interaction.response.defer(thinking=True, ephemeral=True)
 
     thread = interaction.channel
     bp_data[user.id] = bp_data.get(user.id, 0) + bp
