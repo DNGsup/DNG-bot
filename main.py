@@ -334,8 +334,11 @@ async def check_bp(interaction: discord.Interaction):
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1], reverse=True)
     embed = discord.Embed(title=thread.name, description="🏆 สรุปคะแนน BP", color=discord.Color.gold())
+
     for idx, (user_id, bp) in enumerate(sorted_bp, 1):
-        embed.add_field(name=f"{idx}. <@{user_id}>", value=f"{bp} BP", inline=False)
+        member = interaction.guild.get_member(user_id)  # ดึงข้อมูลสมาชิกจาก ID
+        mention = member.mention if member else f"<@{user_id}>"  # ใช้ mention แทน user_id
+        embed.add_field(name=f"{idx}. {mention}", value=f"{bp} BP", inline=False)
 
     if interaction.guild_id in bp_summary_room:
         summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
@@ -355,7 +358,7 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
     thread = interaction.channel
     bp_data[user.id] = bp_data.get(user.id, 0) + bp
     embed = discord.Embed(title=thread.name, description="💎 บวกคะแนน BP", color=discord.Color.blue())
-    embed.add_field(name=f"<@{user.id}>", value=f"{bp} BP", inline=False)
+    embed.add_field(name=f"{user.mention}", value=f"{bp} BP", inline=False)  # ใช้ mention แทน user_id
 
     if interaction.guild_id in bp_summary_room:
         summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
