@@ -8,8 +8,9 @@ import datetime
 from database import load_data ,save_data
 from myserver import server_on
 from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS
-from database import add_broadcast_channel, remove_broadcast_channel, get_rooms, broadcast_channels
-from database import notification_role ,notification_room ,boss_notifications
+from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
+from database import set_notification_room, set_notification_role
+from database import broadcast_channels, notification_room, notification_role, boss_notifications # แยก import ให้ชัดเจน
 from scheduler import schedule_boss_notifications
 
 intents = discord.Intents.default()
@@ -43,7 +44,6 @@ async def lock_thread_after_delay(thread: discord.Thread):
         print(f"Thread {thread.name} not found, it might be deleted.")
     except discord.Forbidden:
         print(f"❌ Bot ไม่มีสิทธิ์ในการล็อกเธรด {thread.name}. กรุณาให้สิทธิ์ 'Manage Threads'")
-
 
 @bot.tree.command(name="broadcast_setting", description="ตั้งค่าห้องบอร์ดแคสต์")
 @app_commands.describe(
@@ -131,8 +131,8 @@ async def broadcast(
 # ----------- ระบบตั้งค่าห้องแจ้งเตือนเวลาบอส ✅ -----------
 @bot.tree.command(name='noti_room', description='ตั้งค่าช่องสำหรับแจ้งเตือนบอส')
 async def noti_room(interaction: discord.Interaction, channel: discord.TextChannel):
-    guild_id = interaction.guild_id  # ✅ ดึง ID ของเซิร์ฟเวอร์
-    notification_room[guild_id] = channel.id  # ✅ บันทึกค่า channel.id ตาม guild
+    guild_id = str(interaction.guild_id)  # ✅ แปลงเป็น string เพื่อให้ตรงกับ database
+    set_notification_room(guild_id, channel.id)  # ✅ ใช้ฟังก์ชันแทนการกำหนดค่าโดยตรง
     # ✅ ตอบกลับโดยตรง แทนการ defer()
     await interaction.response.send_message(
         f"✅ ตั้งค่าช่อง {channel.mention} เป็นช่องแจ้งเตือนบอสเรียบร้อยแล้ว!", ephemeral=True
@@ -140,8 +140,8 @@ async def noti_room(interaction: discord.Interaction, channel: discord.TextChann
 # ----------- ตั้งค่า Role ที่ต้องการให้บอทแท็กในการแจ้งเตือนบอส ✅-----------
 @bot.tree.command(name="noti_role", description="ตั้งค่า Role สำหรับแจ้งเตือนบอส")
 async def noti_role(interaction: discord.Interaction, role: discord.Role):
-    guild_id = interaction.guild_id
-    notification_role[guild_id] = role.id  # บันทึก role.id ลง dictionary
+    guild_id = str(interaction.guild_id)  # ✅ แปลงเป็น string
+    set_notification_role(guild_id, role.id)  # ✅ ใช้ฟังก์ชันแทนการกำหนดค่าโดยตรง
 
     await interaction.response.send_message(
         f"✅ ตั้งค่า Role Notification เป็น <@&{role.id}> เรียบร้อยแล้ว!",
@@ -159,10 +159,10 @@ async def notification(
         role: discord.Role = None  # ทำให้ role เป็น optional
 ):
     await interaction.response.defer(ephemeral=True)
-    guild_id = interaction.guild_id
+    guild_id = str(interaction.guild_id)  # ✅ แปลงเป็น string
 
     # ดึง role จาก database ถ้าไม่มีให้ใช้ค่าที่ส่งมา
-    role_id = notification_role.get(guild_id)
+    role_id = notification_role.get(guild_id)  # ✅ ดึงค่า Role จาก database
     if role is None and role_id:
         role = interaction.guild.get_role(role_id)  # ดึง role object
 
@@ -174,7 +174,6 @@ async def notification(
 
     if guild_id not in boss_notifications:
         boss_notifications[guild_id] = []
-
 
     boss_notifications[guild_id].append({
         "boss_name": boss_name.name,
@@ -233,7 +232,7 @@ async def notification_list(interaction: discord.Interaction):
             await interaction.response.defer()
 
             guild_id = interaction.guild_id
-            channel_id = notification_room.get(guild_id)
+            channel_id = notification_room.get(str(guild_id))  # ✅ ใช้ string key
 
             if not channel_id:
                 return await interaction.followup.send("❌ ยังไม่ได้ตั้งค่าช่องแจ้งเตือนบอส!", ephemeral=True)
