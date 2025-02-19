@@ -4,7 +4,7 @@ from discord.ext import commands
 import pytz
 import datetime
 import asyncio
-from database import notification_room, notification_role # แยก import ให้ชัดเจน
+from database import notification_room, notification_role, boss_notifications# แยก import ให้ชัดเจน
 from enumOptions import BossName ,OWNER_ICONS ,Owner
 
 local_tz = pytz.timezone('Asia/Bangkok')  # ใช้เวลาประเทศไทย
@@ -18,8 +18,15 @@ async def schedule_boss_notifications(bot,guild_id, boss_name, spawn_time, owner
     boss_display_name = BossName[boss_name].value
     time_until_spawn = (spawn_time - now).total_seconds()
     time_before_five_min = max(time_until_spawn - 300, 0)
-    owner_enum = Owner(owner) if isinstance(owner, str) else owner  # แปลงกลับเป็น Enum
-    owner_icon = OWNER_ICONS.get(owner_enum.value, "❓")
+
+    if isinstance(owner, str):
+        try:
+            owner_enum = Owner[owner]  # แปลง string เป็น Enum
+        except KeyError:
+            owner_enum = None  # หรือค่าดีฟอลต์ที่เหมาะสม
+    else:
+        owner_enum = owner  # ถ้าเป็น Enum อยู่แล้วก็ใช้เลย
+    owner_icon = OWNER_ICONS.get(owner_enum.value if owner_enum else "Unknown", "❓")
 
     print(f"[DEBUG] Scheduling boss: {boss_name} at {spawn_time} (in {time_until_spawn}s)")
 

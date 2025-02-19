@@ -4,8 +4,7 @@
 broadcast_channels = {}
 notification_room = {}
 notification_role = {}
-boss_notifications = {}  # ไม่บันทึกลงไฟล์
-
+boss_notifications = {}  # เพิ่มตัวแปรสำหรับจัดการแจ้งเตือนบอส
 # ------------------ Save / Load functions ------------------
 # ------------------ Broadcast management ------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
