@@ -307,8 +307,10 @@ async def setting_bproom(interaction: discord.Interaction, room: discord.TextCha
     bp_summary_room[interaction.guild_id] = room.id
     await interaction.response.send_message(f'ตั้งค่าห้องสรุปคะแนนเป็น {room.mention}', ephemeral=True)
 
-@bot.tree.command(name="check_bp",description="คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง")
+
+@bot.tree.command()
 async def check_bp(interaction: discord.Interaction):
+    """ คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง """
     if not isinstance(interaction.channel, discord.Thread):
         await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
         return
@@ -317,12 +319,18 @@ async def check_bp(interaction: discord.Interaction):
     user_bp = {}
 
     async for message in thread.history(limit=None):
+        if message.author.bot:
+            continue
+
+        if message.author.id not in user_bp:
+            user_bp[message.author.id] = 0
+
         for reaction in message.reactions:
             if str(reaction.emoji) in bp_reactions:
                 async for user in reaction.users():
                     if user.bot:
                         continue
-                    user_bp[user.id] = user_bp.get(user.id, 0) + bp_reactions[str(reaction.emoji)]
+                    user_bp[message.author.id] += bp_reactions[str(reaction.emoji)]
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1], reverse=True)
     summary = f'🏆 สรุปคะแนน BP {thread.name}\n'
