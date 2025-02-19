@@ -146,7 +146,7 @@ async def broadcast(
 # ----------- ระบบตั้งค่าห้องแจ้งเตือนเวลาบอส ✅ -----------
 @bot.tree.command(name='noti_room', description='ตั้งค่าช่องสำหรับแจ้งเตือนบอส')
 async def noti_room(interaction: discord.Interaction, channel: discord.TextChannel):
-    guild_id = str(interaction.guild_id)  # ✅ แปลงเป็น string เพื่อให้ตรงกับ database
+    guild_id = (interaction.guild_id)  # ✅ แปลงเป็น string เพื่อให้ตรงกับ database
     set_notification_room(guild_id, channel.id)  # ✅ ใช้ฟังก์ชันแทนการกำหนดค่าโดยตรง
     # ✅ ตอบกลับโดยตรง แทนการ defer()
     await interaction.response.send_message(
@@ -155,7 +155,7 @@ async def noti_room(interaction: discord.Interaction, channel: discord.TextChann
 # ----------- ตั้งค่า Role ที่ต้องการให้บอทแท็กในการแจ้งเตือนบอส ✅-----------
 @bot.tree.command(name="noti_role", description="ตั้งค่า Role สำหรับแจ้งเตือนบอส")
 async def noti_role(interaction: discord.Interaction, role: discord.Role):
-    guild_id = str(interaction.guild_id)  # ✅ แปลงเป็น string
+    guild_id = (interaction.guild_id)  # ✅ แปลงเป็น string
     set_notification_role(guild_id, role.id)  # ✅ ใช้ฟังก์ชันแทนการกำหนดค่าโดยตรง
 
     await interaction.response.send_message(
@@ -174,7 +174,7 @@ async def notification(
         role: discord.Role = None  # ทำให้ role เป็น optional
 ):
     await interaction.response.defer(ephemeral=True)
-    guild_id = str(interaction.guild_id)  # ✅ แปลงเป็น string
+    guild_id = (interaction.guild_id)  # ✅ แปลงเป็น string
 
     # ดึง role จาก database ถ้าไม่มีให้ใช้ค่าที่ส่งมา
     role_id = notification_role.get(guild_id)  # ✅ ดึงค่า Role จาก database
@@ -217,7 +217,7 @@ async def notification_list(interaction: discord.Interaction):
         if notif["spawn_time"] > now
     ]
     print(f"[DEBUG] notification_list - Found {len(active_notifications)} active notifications")
-    
+
     if not active_notifications:
         return await interaction.followup.send("❌ ไม่มีบอสที่ถูกตั้งค่าแจ้งเตือน", ephemeral=True)
 
