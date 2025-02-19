@@ -179,7 +179,7 @@ async def notification(
     boss_notifications[guild_id].append({
         "boss_name": boss_name.name,
         "spawn_time": spawn_time,
-        "owner": owner.value,
+        "owner": owner,
         "role": role.id if role else None  # ป้องกัน NoneType
     })
 
@@ -188,7 +188,7 @@ async def notification(
         ephemeral=True
     )
     # เรียกใช้ฟังก์ชันโดยส่ง bot ไปด้วย
-    await schedule_boss_notifications(bot, guild_id, boss_name.name, spawn_time, owner.value, role)
+    await schedule_boss_notifications(bot, guild_id, boss_name.name, spawn_time, Owner, role)
 #-------- คำสั่งดูรายการบอสที่ตั้งค่าไว้ ✅-----------
 @bot.tree.command(name="notification_list", description="ดูรายการบอสที่ตั้งค่าแจ้งเตือน")
 async def notification_list(interaction: discord.Interaction):
