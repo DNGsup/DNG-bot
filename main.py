@@ -167,7 +167,7 @@ async def notification(
         role = interaction.guild.get_role(role_id)  # ดึง role object
 
     # ถ้าไม่มี role เลย ให้แท็ก @everyone แทน
-    role_mention = f"<@&{role.id}>" if role else "@everyone"
+    role_mention = f"<@&{role_id}>" if role else "@everyone"
 
     now = datetime.datetime.now(local_tz)  # ✅ ใช้ timezone ที่กำหนด
     spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)
@@ -179,11 +179,11 @@ async def notification(
         "boss_name": boss_name.name,
         "spawn_time": spawn_time,
         "owner": owner,
-        "role": role.id if role else None  # ป้องกัน NoneType
+        "role": role_id if role else None  # ป้องกัน NoneType
     })
 
     await interaction.followup.send(
-        f"ตั้งค่าแจ้งเตือนบอส {boss_name.value} เรียบร้อยแล้ว! จะเกิดในอีก {hours} ชั่วโมง {minutes} นาที.",
+        f"ตั้งค่าแจ้งเตือนบอส {boss_name.value} เรียบร้อยแล้ว! จะเกิดในอีก {hours} ชั่วโมง {minutes} นาที. {role_mention}",
         ephemeral=True
     )
     # เรียกใช้ฟังก์ชันโดยส่ง bot ไปด้วย
