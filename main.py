@@ -163,6 +163,35 @@ async def noti_role(interaction: discord.Interaction, role: discord.Role):
         ephemeral=True
     )
     print(f"[DEBUG] noti_role: {notification_role}")
+# ----------- ลบการแจ้งเตือนบอสที่ตั้งค่าไว้ -----------
+@bot.tree.command(name="remove_notification", description="ลบการแจ้งเตือนบอสที่ตั้งค่าไว้")
+async def remove_notification(interaction: discord.Interaction, boss_name: BossName):
+    guild_id = interaction.guild_id  # ใช้ค่า guild_id ปัจจุบัน
+
+    if guild_id not in boss_notifications or not boss_notifications[guild_id]:
+        return await interaction.response.send_message("❌ ไม่มีรายการแจ้งเตือนบอส", ephemeral=True)
+
+    before_count = len(boss_notifications[guild_id])
+    boss_notifications[guild_id] = [
+        notif for notif in boss_notifications[guild_id]
+        if notif["boss_name"] != boss_name.name
+    ]
+    after_count = len(boss_notifications[guild_id])
+
+    if before_count == after_count:
+        await interaction.response.send_message(f"❌ ไม่พบการแจ้งเตือนของ {boss_name.value}", ephemeral=True)
+    else:
+        await interaction.response.send_message(f"✅ ลบการแจ้งเตือนของ {boss_name.value} เรียบร้อยแล้ว!", ephemeral=True)
+# ----------- ล้างรายการแจ้งเตือนบอสทั้งหมด -----------
+@bot.tree.command(name="clear_notifications", description="ล้างรายการแจ้งเตือนบอสทั้งหมด")
+async def clear_notifications(interaction: discord.Interaction):
+    guild_id = interaction.guild_id  # ใช้ค่า guild_id ปัจจุบัน
+
+    if guild_id not in boss_notifications or not boss_notifications[guild_id]:
+        return await interaction.response.send_message("❌ ไม่มีข้อมูลให้ล้าง", ephemeral=True)
+
+    boss_notifications[guild_id] = []  # เคลียร์รายการแจ้งเตือนทั้งหมด
+    await interaction.response.send_message("✅ ล้างรายการแจ้งเตือนบอสทั้งหมดเรียบร้อยแล้ว!", ephemeral=True)
 # ----------- ระบบแจ้งเตือนเวลาบอส ✅-----------
 @bot.tree.command(name='notification', description='ตั้งค่าแจ้งเตือนบอส')
 async def notification(
