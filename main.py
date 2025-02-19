@@ -29,7 +29,7 @@ async def on_ready():
 # //////////////////////////// คำสั่งดูตั้งค่าของเซิร์ฟเวอร์ ////////////////////////////
 @bot.tree.command(name="server_settings", description="ดูการตั้งค่าของเซิร์ฟเวอร์")
 async def server_settings(interaction: discord.Interaction):
-    guild_id = str(interaction.guild_id)
+    guild_id = interaction.guild_id
 
     # ดึงข้อมูลของเซิร์ฟเวอร์นี้
     broadcast_channels_list = broadcast_channels.get(guild_id, [])
@@ -275,7 +275,7 @@ async def notification_list(interaction: discord.Interaction):
             await interaction.response.defer()
 
             guild_id = interaction.guild_id
-            channel_id = notification_room.get(str(guild_id))  # ✅ ใช้ string key
+            channel_id = notification_room.get(guild_id)
 
             if not channel_id:
                 return await interaction.followup.send("❌ ยังไม่ได้ตั้งค่าช่องแจ้งเตือนบอส!", ephemeral=True)
