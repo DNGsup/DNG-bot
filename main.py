@@ -14,7 +14,7 @@ from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
 from database import set_notification_room, set_notification_role
 from database import broadcast_channels, notification_room, notification_role, boss_notifications
 from scheduler import schedule_boss_notifications
-from database import bp_data, bp_reactions, bp_summary_room,giveaways ,giveaway_room
+from database import bp_data, bp_reactions, bp_summary_room,giveaways ,giveaway_room ,winner_history
 
 intents = discord.Intents.default()
 intents.messages = True  # ✅ เปิดการอ่านข้อความ
@@ -365,7 +365,7 @@ async def setgiveaway(interaction: discord.Interaction, channel: discord.TextCha
     guild_id = str(interaction.guild_id)
     giveaway_room[guild_id] = channel.id
     await interaction.response.send_message(f"✅ ตั้งค่าห้อง {channel.mention} สำหรับกิจกรรมสุ่มรางวัลเรียบร้อย!", ephemeral=True)
-    
+
 @bot.tree.command(name="gcreate", description="สร้างกิจกรรมสุ่มรางวัล")
 @app_commands.describe(role="เลือกโรลที่สามารถเข้าร่วมได้", image_url="ใส่ URL รูปภาพสำหรับกิจกรรม")
 async def gcreate(interaction: discord.Interaction, role: discord.Role, image_url: str = None):
@@ -487,13 +487,19 @@ async def end_giveaway(channel_id):
         giveaways.pop(channel_id, None)
         return
 
-    winners = random.sample(giveaway["entries"], min(giveaway["winners"], len(giveaway["entries"])))
-    winner_mentions = ', '.join(f"<@{winner}>" for winner in winners)
+    # ✅ ลดน้ำหนักคนที่ชนะบ่อย
+    weights = [1 / (winner_history.get(entry, 0) + 1) for entry in giveaway["entries"]]
+    winners = random.choices(giveaway["entries"], weights=weights,
+                            k=min(giveaway["winners"], len(giveaway["entries"])))
+    # ✅ อัปเดตประวัติการชนะ
+    for winner in winners:
+        winner_history[winner] = winner_history.get(winner, 0) + 1
 
+    winner_mentions = ', '.join(f"<@{winner}>" for winner in winners)
     win_embed = discord.Embed(
         title="🎉 ขอแสดงความยินดี! 🎉",
         description=f"{winner_mentions} ได้รับรางวัล {giveaway['prize']}!",
-        color=discord.Color.green()
+            color=discord.Color.green()
     )
     await giveaway["embed_message"].channel.send(embed=win_embed)
     giveaways.pop(channel_id, None)
