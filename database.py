@@ -10,6 +10,7 @@ bp_reactions = {} # สำหรับเก็บคะแนน
 bp_data = {} # สำหรับเก็บคะแนน
 giveaway_room = {}  # ห้องสำหรับจัดกิจกรรม
 giveaways = {}       # ข้อมูลของกิจกรรม
+winner_history = {} # ✅ เก็บจำนวนครั้งที่ผู้ใช้เคยชนะ (ในหน่วยความจำ)
 # ------------------ Broadcast management ------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
     """เพิ่มช่องสำหรับ broadcast ในเซิร์ฟเวอร์ที่กำหนด"""
