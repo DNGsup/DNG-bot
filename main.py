@@ -358,7 +358,7 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
             await interaction.response.send_message('ไม่พบห้องที่ตั้งค่าไว้', ephemeral=True)
     else:
         await interaction.response.send_message('ยังไม่มีการตั้งค่าห้องสรุปคะแนน', ephemeral=True)
-# //////////////////////////// Giveaway คำสั่งใช้งานได้แล้ว✅////////////////////////////
+# //////////////////////////// Giveaway ////////////////////////////
 class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรรมสุ่มรางวัล"):
     prize = discord.ui.TextInput(label="ชื่อรางวัล", placeholder="ใส่ชื่อรางวัล", required=True)
     amount = discord.ui.TextInput(label="จำนวนรางวัล", placeholder="ใส่จำนวนรางวัล", required=True)
@@ -439,9 +439,7 @@ class JoinButton(discord.ui.View):
 @bot.tree.command(name="gcreate", description="สร้างกิจกรรมสุ่มรางวัล")
 @app_commands.describe(role="เลือกโรลที่สามารถเข้าร่วมได้")
 async def gcreate(interaction: discord.Interaction, role: discord.Role):
-    # ❌ ห้ามใช้ defer() ก่อน send_modal()
-    # ✅ ใช้ send_modal() โดยตรง
-    await interaction.response.send_modal(GiveawayModal(interaction, role))
+    await interaction.response.send_modal(GiveawayModal(interaction, role))  # ✅ ใช้ send_modal() โดยตรง
 
 def parse_duration(duration: str):
     units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
