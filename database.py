@@ -5,10 +5,10 @@ broadcast_channels = {}
 notification_room = {}
 notification_role = {}
 boss_notifications = {}  # เพิ่มตัวแปรสำหรับจัดการแจ้งเตือนบอส
-# bp_summary_room สำหรับเก็บห้องสรุปคะแนน / bp_data สำหรับเก็บคะแนน BP ของแต่ละสมาชิก /
-bp_summary_room = {}
-bp_reactions = {}
-bp_data = {}
+bp_summary_room = {} # สำหรับเก็บห้องสรุปคะแนน
+bp_reactions = {} # สำหรับเก็บคะแนน
+bp_data = {} # สำหรับเก็บคะแนน
+giveaway_room = {}  # เก็บห้องสำหรับกิจกรรมแจกของ
 giveaways = {}
 # ------------------ Broadcast management ------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
