@@ -445,11 +445,7 @@ async def end_giveaway(channel_id):
 
         if giveaway["entries"]:
             winners = random.sample(giveaway["entries"], min(giveaway["winners"], len(giveaway["entries"])))
-            winner_mentions = []
-            for winner_id in winners:
-                winner = bot.get_user(winner_id)
-                if winner:
-                    winner_mentions.append(winner.mention)
+            winner_mentions = [f"<@{winner_id}>" for winner_id in winners]
             if winner_mentions:
                 embed = discord.Embed(title="🎉 ยินดีด้วย! 🎉",
                                       description=f"{', '.join(winner_mentions)} ได้รับ {giveaway['prize']}!",
