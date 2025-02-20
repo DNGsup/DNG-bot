@@ -373,9 +373,13 @@ class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรร�
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
+            if interaction.response.is_done():
+                return  # ป้องกันการใช้ Interaction ที่หมดอายุไปแล้ว
+
             amount = int(self.amount.value)
             winners = int(self.winners.value)
             duration_seconds = parse_duration(self.duration.value)
+
             if duration_seconds is None or duration_seconds < 30 or duration_seconds > 604800:
                 await interaction.response.send_message("ระยะเวลาต้องอยู่ระหว่าง 30 วินาทีถึง 7 วัน (7d)",
                                                         ephemeral=True)
@@ -428,6 +432,7 @@ class JoinButton(discord.ui.View):
 @bot.tree.command(name="gcreate", description="สร้างกิจกรรมสุ่มรางวัล")
 @app_commands.describe(role="เลือกโรลที่สามารถเข้าร่วมได้")
 async def gcreate(interaction: discord.Interaction, role: discord.Role):
+    await interaction.response.defer()  # เพิ่มตรงนี้เพื่อป้องกัน Interaction หมดอายุ
     await interaction.response.send_modal(GiveawayModal(interaction, role))
 
 def parse_duration(duration: str):
