@@ -371,13 +371,13 @@ class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรร�
     amount = discord.ui.TextInput(label="จำนวนรางวัล", placeholder="ใส่จำนวนรางวัล", required=True)
     winners = discord.ui.TextInput(label="จำนวนผู้ชนะ", placeholder="ใส่จำนวนผู้ชนะ", required=True)
     duration = discord.ui.TextInput(label="ระยะเวลา (s/m/h/d)", placeholder="เช่น 30s, 5m, 2h", required=True)
-    image_url = discord.ui.TextInput(label="URL รูปภาพ (ถ้ามี)", placeholder="ใส่ลิงก์รูปภาพ", required=False)
     description = discord.ui.TextInput(label="คำอธิบาย", style=discord.TextStyle.long, required=True)
 
-    def __init__(self, interaction: discord.Interaction, role: discord.Role):
+    def __init__(self, interaction: discord.Interaction, role: discord.Role, image_url: str):
         super().__init__()
         self.interaction = interaction
         self.role = role
+        self.image_url = image_url
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
@@ -472,10 +472,10 @@ class JoinButton(discord.ui.View):
         await interaction.response.send_message("✅ คุณเข้าร่วมกิจกรรมแล้ว!", ephemeral=True)
 
 @bot.tree.command(name="gcreate", description="สร้างกิจกรรมสุ่มรางวัล")
-@app_commands.describe(role="เลือกโรลที่สามารถเข้าร่วมได้")
-async def gcreate(interaction: discord.Interaction, role: discord.Role):
-    await interaction.response.send_modal(GiveawayModal(interaction, role))  # ✅ ใช้ send_modal() โดยตรง
-
+@app_commands.describe(role="เลือกโรลที่สามารถเข้าร่วมได้", image_url="ใส่ URL รูปภาพสำหรับกิจกรรม")
+async def gcreate(interaction: discord.Interaction, role: discord.Role, image_url: str = None):
+    await interaction.response.send_modal(GiveawayModal(interaction, role, image_url or ""))
+    
 def parse_duration(duration: str):
     units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     try:
