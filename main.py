@@ -393,25 +393,29 @@ class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรร�
         embed.add_field(name="จำนวนคนเข้าร่วม:", value="0", inline=False)
         embed.add_field(name="โรลที่เข้าร่วมได้:", value=self.role.mention, inline=False)
 
-        view = JoinButton(interaction.channel.id)
+        view = JoinButton(interaction.channel.id, self.role.id)
         message = await interaction.channel.send(embed=embed, view=view)
         giveaways[interaction.channel.id] = {"prize": self.prize.value, "amount": amount, "winners": winners,
                                              "entries": [], "end_time": end_time, "embed": embed,
-                                             "embed_message": message, "view": view}
+                                             "embed_message": message, "view": view, "role_id": self.role.id}
         await interaction.response.send_message("กิจกรรมเริ่มต้นแล้ว!", ephemeral=True)
 
         await asyncio.sleep(duration_seconds)
         await end_giveaway(interaction.channel.id)
 
 class JoinButton(discord.ui.View):
-    def __init__(self, giveaway_id):
+    def __init__(self, giveaway_id, role_id):
         super().__init__(timeout=None)
         self.giveaway_id = giveaway_id
+        self.role_id = role_id
 
     @discord.ui.button(label="เข้าร่วม", style=discord.ButtonStyle.green)
     async def join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         giveaway = giveaways.get(self.giveaway_id)
         if giveaway:
+            if self.role_id not in [role.id for role in interaction.user.roles]:
+                await interaction.response.send_message("คุณไม่มีสิทธิ์เข้าร่วมกิจกรรมนี้", ephemeral=True)
+                return
             if interaction.user.id in giveaway["entries"]:
                 await interaction.response.send_message("คุณเข้าร่วมแล้ว!", ephemeral=True)
             else:
@@ -441,13 +445,16 @@ async def end_giveaway(channel_id):
 
         if giveaway["entries"]:
             winners = random.sample(giveaway["entries"], min(giveaway["winners"], len(giveaway["entries"])))
+            winner_mentions = []
             for winner_id in winners:
                 winner = bot.get_user(winner_id)
                 if winner:
-                    embed = discord.Embed(title="🎉 ยินดีด้วย! 🎉",
-                                          description=f"{winner.mention} ได้รับ {giveaway['prize']}!",
-                                          color=discord.Color.green())
-                    await giveaway["embed_message"].channel.send(embed=embed)
+                    winner_mentions.append(winner.mention)
+            if winner_mentions:
+                embed = discord.Embed(title="🎉 ยินดีด้วย! 🎉",
+                                      description=f"{', '.join(winner_mentions)} ได้รับ {giveaway['prize']}!",
+                                      color=discord.Color.green())
+                await giveaway["embed_message"].channel.send(embed=embed)
         else:
             await giveaway["embed_message"].channel.send("ไม่มีผู้เข้าร่วมเพียงพอสำหรับการจับรางวัล")
 # ------------------------------------------------------------------------------------------
