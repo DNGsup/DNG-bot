@@ -365,6 +365,13 @@ async def setgiveaway(interaction: discord.Interaction, channel: discord.TextCha
     guild_id = str(interaction.guild_id)
     giveaway_room[guild_id] = channel.id
     await interaction.response.send_message(f"✅ ตั้งค่าห้อง {channel.mention} สำหรับกิจกรรมสุ่มรางวัลเรียบร้อย!", ephemeral=True)
+    
+@bot.tree.command(name="gcreate", description="สร้างกิจกรรมสุ่มรางวัล")
+@app_commands.describe(role="เลือกโรลที่สามารถเข้าร่วมได้", image_url="ใส่ URL รูปภาพสำหรับกิจกรรม")
+async def gcreate(interaction: discord.Interaction, role: discord.Role, image_url: str = None):
+    if not image_url and interaction.channel.last_message and interaction.channel.last_message.attachments:
+        image_url = interaction.channel.last_message.attachments[0].url
+    await interaction.response.send_modal(GiveawayModal(interaction, role, image_url or ""))
 
 # ✅ ฟอร์มสร้างกิจกรรมสุ่มรางวัล
 class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรรมสุ่มรางวัล"):
