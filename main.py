@@ -373,7 +373,7 @@ class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรร�
     duration = discord.ui.TextInput(label="ระยะเวลา (s/m/h/d)", placeholder="เช่น 30s, 5m, 2h", required=True)
     description = discord.ui.TextInput(label="คำอธิบาย", style=discord.TextStyle.long, required=True)
 
-    def __init__(self, interaction: discord.Interaction, role: discord.Role, image_url: str):
+    def __init__(self, interaction: discord.Interaction, role: discord.Role, image_url: str = None):
         super().__init__()
         self.interaction = interaction
         self.role = role
@@ -408,8 +408,8 @@ class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรร�
         )
         embed.add_field(name="🏆 จำนวนผู้ชนะ", value=str(winners), inline=True)
         embed.add_field(name="🛡️ โรลที่เข้าร่วมได้", value=self.role.mention, inline=True)
-        embed.add_field(name="⏳ ระยะเวลานับถอยหลัง",
-                        value=f"<t:{int(end_time.timestamp())}:R> (จบใน {formatted_end_time})", inline=False)
+        embed.add_field(name="⏳ สิ้นสุดใน", value=f"<t:{int(end_time.timestamp())}:R>", inline=False)
+        embed.add_field(name="📅 วันเวลาที่สิ้นสุด", value=end_time.strftime("%d/%m/%Y %H:%M"), inline=False)
         embed.add_field(name="👥 จำนวนคนเข้าร่วม", value="0", inline=False)
 
         # ✅ ถ้ามีรูปภาพให้ใส่เข้าไป
@@ -466,7 +466,7 @@ class JoinButton(discord.ui.View):
             return
 
         giveaway["entries"].append(interaction.user.id)
-        giveaway["embed"].set_field_at(3, name="จำนวนคนเข้าร่วม:", value=str(len(giveaway["entries"])), inline=False)
+        giveaway["embed"].set_field_at(4, name="👥 จำนวนคนเข้าร่วม", value=str(len(giveaway["entries"])), inline=False)
         await giveaway["embed_message"].edit(embed=giveaway["embed"], view=self)
 
         await interaction.response.send_message("✅ คุณเข้าร่วมกิจกรรมแล้ว!", ephemeral=True)
@@ -474,8 +474,8 @@ class JoinButton(discord.ui.View):
 @bot.tree.command(name="gcreate", description="สร้างกิจกรรมสุ่มรางวัล")
 @app_commands.describe(role="เลือกโรลที่สามารถเข้าร่วมได้", image_url="ใส่ URL รูปภาพสำหรับกิจกรรม")
 async def gcreate(interaction: discord.Interaction, role: discord.Role, image_url: str = None):
-    if not image_url and interaction.message.attachments:
-        image_url = interaction.message.attachments[0].url
+    if not image_url and interaction.channel.last_message and interaction.channel.last_message.attachments:
+        image_url = interaction.channel.last_message.attachments[0].url
     await interaction.response.send_modal(GiveawayModal(interaction, role, image_url or ""))
 
 def parse_duration(duration: str):
@@ -492,6 +492,7 @@ async def end_giveaway(channel_id):
 
         # ✅ แก้ไขตรงนี้: อัปเดตเวลานับถอยหลังเป็น "หมดเวลา"
     giveaway["embed"].set_field_at(2, name="ระยะเวลานับถอยหลัง:", value="`หมดเวลา`", inline=False)
+    giveaway["embed"].set_field_at(3, name="⏳ สิ้นสุดใน", value="`หมดเวลา`", inline=False)
     await giveaway["embed_message"].edit(embed=giveaway["embed"], view=None) # ✅ เพิ่มการอัปเดตข้อความ Embed
 
     # ✅ ดึงห้องที่ตั้งค่าไว้
