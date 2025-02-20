@@ -359,13 +359,14 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
     else:
         await interaction.response.send_message('ยังไม่มีการตั้งค่าห้องสรุปคะแนน', ephemeral=True)
 # //////////////////////////// Giveaway ////////////////////////////
+# ✅ ตั้งค่าห้องสุ่มรางวัล
 @bot.tree.command(name="setgiveaway", description="ตั้งค่าห้องสำหรับจัดกิจกรรมสุ่มรางวัล")
 async def setgiveaway(interaction: discord.Interaction, channel: discord.TextChannel):
     guild_id = str(interaction.guild_id)
-    giveaway_room[guild_id] = channel.id  # บันทึกห้องที่ตั้งค่าไว้
-
+    giveaway_room[guild_id] = channel.id
     await interaction.response.send_message(f"✅ ตั้งค่าห้อง {channel.mention} สำหรับกิจกรรมสุ่มรางวัลเรียบร้อย!", ephemeral=True)
 
+# ✅ ฟอร์มสร้างกิจกรรมสุ่มรางวัล
 class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรรมสุ่มรางวัล"):
     prize = discord.ui.TextInput(label="ชื่อรางวัล", placeholder="ใส่ชื่อรางวัล", required=True)
     amount = discord.ui.TextInput(label="จำนวนรางวัล", placeholder="ใส่จำนวนรางวัล", required=True)
@@ -381,26 +382,19 @@ class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรร�
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            if interaction.response.is_done():
-                return  # ป้องกันการใช้ Interaction ที่หมดอายุไปแล้ว
-
             amount = int(self.amount.value)
             winners = int(self.winners.value)
             duration_seconds = parse_duration(self.duration.value)
 
             if duration_seconds is None or duration_seconds < 30 or duration_seconds > 604800:
-                await interaction.response.send_message("ระยะเวลาต้องอยู่ระหว่าง 30 วินาทีถึง 7 วัน (7d)",
-                                                        ephemeral=True)
+                await interaction.response.send_message("ระยะเวลาต้องอยู่ระหว่าง 30 วินาทีถึง 7 วัน (7d)", ephemeral=True)
                 return
         except ValueError:
             await interaction.response.send_message("จำนวนรางวัลและจำนวนผู้ชนะต้องเป็นตัวเลข", ephemeral=True)
             return
 
         end_time = datetime.utcnow() + timedelta(seconds=duration_seconds)
-        formatted_end_time = end_time.strftime("%H:%M")  # เวลาที่กิจกรรมจะจบ
-        formatted_start_time = datetime.utcnow().strftime("%H:%M")  # เวลาที่เริ่ม
 
-        # ✅ สร้าง Embed ใหม่ตามที่ต้องการ
         embed = discord.Embed(
             title=f"🎁 {self.prize.value} ({amount} รางวัล)",
             description=self.description.value,
@@ -409,22 +403,21 @@ class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรร�
         embed.add_field(name="🏆 จำนวนผู้ชนะ", value=str(winners), inline=True)
         embed.add_field(name="🛡️ โรลที่เข้าร่วมได้", value=self.role.mention, inline=True)
         embed.add_field(name="⏳ สิ้นสุดใน", value=f"<t:{int(end_time.timestamp())}:R>", inline=False)
-        embed.add_field(name="📅 วันเวลาที่สิ้นสุด", value=end_time.strftime("%d/%m/%Y %H:%M"), inline=False)
         embed.add_field(name="👥 จำนวนคนเข้าร่วม", value="0", inline=False)
 
-        # ✅ ถ้ามีรูปภาพให้ใส่เข้าไป
         if self.image_url:
             embed.set_image(url=self.image_url)
 
-        # ✅ ดึงห้องที่ตั้งค่าไว้
         guild_id = str(interaction.guild_id)
         target_channel = bot.get_channel(giveaway_room.get(guild_id, interaction.channel.id))
 
-        # ✅ ส่ง Embed ไปที่ห้องที่ตั้งค่า
+        if not target_channel:
+            await interaction.response.send_message("❌ ไม่พบห้องสำหรับจัดกิจกรรม!", ephemeral=True)
+            return
+
         view = JoinButton(interaction.channel.id, self.role.id)
         message = await target_channel.send(content="🎉 **กิจกรรมสุ่มรางวัลเริ่มแล้ว!!**", embed=embed, view=view)
 
-        # ✅ บันทึกข้อมูล Giveaway
         giveaways[interaction.channel.id] = {
             "prize": self.prize.value,
             "amount": amount,
@@ -435,13 +428,14 @@ class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรร�
             "embed_message": message,
             "view": view,
             "role_id": self.role.id,
-            "image_url": self.image_url.value if self.image_url.value else None
+            "image_url": self.image_url
         }
 
         await interaction.response.send_message("✅ กิจกรรมเริ่มต้นแล้ว!", ephemeral=True)
         await asyncio.sleep(duration_seconds)
         await end_giveaway(interaction.channel.id)
 
+# ✅ ปุ่มเข้าร่วมกิจกรรม
 class JoinButton(discord.ui.View):
     def __init__(self, giveaway_id, role_id):
         super().__init__(timeout=None)
@@ -455,80 +449,48 @@ class JoinButton(discord.ui.View):
             await interaction.response.send_message("❌ กิจกรรมนี้สิ้นสุดลงแล้ว", ephemeral=True)
             return
 
-        # ✅ แก้ไขให้ตรวจสอบ role อย่างถูกต้อง
         if not any(role.id == self.role_id for role in interaction.user.roles):
             await interaction.response.send_message("❌ คุณไม่มีสิทธิ์เข้าร่วมกิจกรรมนี้", ephemeral=True)
             return
 
-        # ✅ ตรวจสอบว่าผู้ใช้เข้าร่วมไปแล้วหรือไม่
         if interaction.user.id in giveaway["entries"]:
             await interaction.response.send_message("⚠️ คุณเข้าร่วมกิจกรรมนี้ไปแล้ว!", ephemeral=True)
             return
 
         giveaway["entries"].append(interaction.user.id)
-        giveaway["embed"].set_field_at(4, name="👥 จำนวนคนเข้าร่วม", value=str(len(giveaway["entries"])), inline=False)
+        giveaway["embed"].set_field_at(3, name="👥 จำนวนคนเข้าร่วม", value=str(len(giveaway["entries"])), inline=False)
         await giveaway["embed_message"].edit(embed=giveaway["embed"], view=self)
 
         await interaction.response.send_message("✅ คุณเข้าร่วมกิจกรรมแล้ว!", ephemeral=True)
 
-@bot.tree.command(name="gcreate", description="สร้างกิจกรรมสุ่มรางวัล")
-@app_commands.describe(role="เลือกโรลที่สามารถเข้าร่วมได้", image_url="ใส่ URL รูปภาพสำหรับกิจกรรม")
-async def gcreate(interaction: discord.Interaction, role: discord.Role, image_url: str = None):
-    if not image_url and interaction.channel.last_message and interaction.channel.last_message.attachments:
-        image_url = interaction.channel.last_message.attachments[0].url
-    await interaction.response.send_modal(GiveawayModal(interaction, role, image_url or ""))
+# ✅ ฟังก์ชันจบกิจกรรม
+async def end_giveaway(channel_id):
+    giveaway = giveaways.get(channel_id)
+    if not giveaway:
+        return
 
+    giveaway["embed"].set_field_at(2, name="⏳ สิ้นสุดใน", value="`หมดเวลา`", inline=False)
+    await giveaway["embed_message"].edit(embed=giveaway["embed"], view=None)
+
+    if not giveaway["entries"]:
+        await giveaway["embed_message"].channel.send("❌ ไม่มีผู้เข้าร่วมเพียงพอสำหรับการจับรางวัล")
+        giveaways.pop(channel_id, None)
+        return
+
+    winners = random.sample(giveaway["entries"], min(giveaway["winners"], len(giveaway["entries"])))
+    winner_mentions = ', '.join(f"<@{winner}>" for winner in winners)
+
+    await giveaway["embed_message"].channel.send(f"🎉 ขอแสดงความยินดีกับ {winner_mentions} ที่ชนะรางวัล {giveaway['prize']}!")
+
+    giveaways.pop(channel_id, None)
+
+# ✅ ฟังก์ชันแปลงเวลา
 def parse_duration(duration: str):
     units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     try:
         return int(duration[:-1]) * units[duration[-1]]
     except:
         return None
-
-async def end_giveaway(channel_id):
-    giveaway = giveaways.get(channel_id)
-    if not giveaway:
-        return  # ป้องกัน error หาก giveaway ถูกลบไปก่อน
-
-        # ✅ แก้ไขตรงนี้: อัปเดตเวลานับถอยหลังเป็น "หมดเวลา"
-    giveaway["embed"].set_field_at(2, name="ระยะเวลานับถอยหลัง:", value="`หมดเวลา`", inline=False)
-    giveaway["embed"].set_field_at(3, name="⏳ สิ้นสุดใน", value="`หมดเวลา`", inline=False)
-    await giveaway["embed_message"].edit(embed=giveaway["embed"], view=None) # ✅ เพิ่มการอัปเดตข้อความ Embed
-
-    # ✅ ดึงห้องที่ตั้งค่าไว้
-    guild_id = str(giveaway["embed_message"].guild.id)
-    target_channel = bot.get_channel(giveaway_room.get(guild_id, giveaway["embed_message"].channel.id))
-
-    # ✅ ถ้าไม่มีคนเข้าร่วม
-    if not giveaway["entries"]:
-        await target_channel.send("❌ ไม่มีผู้เข้าร่วมเพียงพอสำหรับการจับรางวัล")
-        return
-
-    # ✅ ถ้ามีแค่ 1 คนเข้าร่วม และต้องการผู้ชนะ 1 คน → คนนั้นชนะทันที
-    if len(giveaway["entries"]) == 1 and giveaway["winners"] == 1:
-        winner = giveaway["entries"][0]
-    else:
-        # ✅ ถ้ามีหลายคน ให้สุ่มผู้ชนะตามจำนวนที่กำหนด
-        winners = random.sample(giveaway["entries"], min(giveaway["winners"], len(giveaway["entries"])))
-
-        # ✅ ส่ง Embed แยกสำหรับแต่ละผู้ชนะ
-        for winner_id in winners:
-            embed = discord.Embed(
-                title="🎉 ยินดีด้วย! 🎉",
-                description=f"<@{winner_id}> ได้รับ {giveaway['prize']}!",
-                color=discord.Color.green()
-            )
-            # ✅ ถ้ามีรูปภาพให้ใส่เข้าไป
-            if giveaway["image_url"]:
-                embed.set_image(url=giveaway["image_url"])
-    # ✅ ส่งไปที่ห้องที่ตั้งค่าไว้
-    guild_id = str(giveaway["embed_message"].guild.id)
-    target_channel = bot.get_channel(giveaway_room.get(guild_id, giveaway["embed_message"].channel.id))
-
-    await target_channel.send(embed=embed)
-
-    # ✅ ลบข้อมูลของกิจกรรมนี้ออกจาก dictionary
-    giveaways.pop(channel_id, None)
 # ------------------------------------------------------------------------------------------
 server_on()
 bot.run(os.getenv('TOKEN'))
