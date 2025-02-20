@@ -366,9 +366,10 @@ class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรร�
     duration = discord.ui.TextInput(label="ระยะเวลา (s/m/h/d)", placeholder="เช่น 30s, 5m, 2h", required=True)
     description = discord.ui.TextInput(label="คำอธิบาย", style=discord.TextStyle.long, required=True)
 
-    def __init__(self, interaction: discord.Interaction):
+    def __init__(self, interaction: discord.Interaction, role: discord.Role):
         super().__init__()
         self.interaction = interaction
+        self.role = role
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
@@ -390,12 +391,13 @@ class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรร�
         embed.add_field(name="จำนวนผู้ชนะ:", value=str(winners), inline=False)
         embed.add_field(name="ระยะเวลานับถอยหลัง:", value=f"<t:{int(end_time.timestamp())}:R>", inline=False)
         embed.add_field(name="จำนวนคนเข้าร่วม:", value="0", inline=False)
+        embed.add_field(name="โรลที่เข้าร่วมได้:", value=self.role.mention, inline=False)
 
         view = JoinButton(interaction.channel.id)
         message = await interaction.channel.send(embed=embed, view=view)
         giveaways[interaction.channel.id] = {"prize": self.prize.value, "amount": amount, "winners": winners,
                                              "entries": [], "end_time": end_time, "embed": embed,
-                                             "embed_message": message}
+                                             "embed_message": message, "view": view}
         await interaction.response.send_message("กิจกรรมเริ่มต้นแล้ว!", ephemeral=True)
 
         await asyncio.sleep(duration_seconds)
@@ -414,11 +416,15 @@ class JoinButton(discord.ui.View):
                 await interaction.response.send_message("คุณเข้าร่วมแล้ว!", ephemeral=True)
             else:
                 giveaway["entries"].append(interaction.user.id)
+                giveaway["embed"].set_field_at(3, name="จำนวนคนเข้าร่วม:", value=str(len(giveaway["entries"])),
+                                               inline=False)
+                await giveaway["embed_message"].edit(embed=giveaway["embed"], view=self)
                 await interaction.response.send_message("✅ คุณเข้าร่วมแล้ว!", ephemeral=True)
 
 @bot.tree.command(name="gcreate", description="สร้างกิจกรรมสุ่มรางวัล")
-async def gcreate(interaction: discord.Interaction):
-    await interaction.response.send_modal(GiveawayModal(interaction))
+@app_commands.describe(role="เลือกโรลที่สามารถเข้าร่วมได้")
+async def gcreate(interaction: discord.Interaction, role: discord.Role):
+    await interaction.response.send_modal(GiveawayModal(interaction, role))
 
 def parse_duration(duration: str):
     units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
@@ -429,15 +435,21 @@ def parse_duration(duration: str):
 
 async def end_giveaway(channel_id):
     giveaway = giveaways.pop(channel_id, None)
-    if giveaway and giveaway["entries"]:
-        winners = random.sample(giveaway["entries"], min(giveaway["winners"], len(giveaway["entries"])))
-        for winner_id in winners:
-            winner = bot.get_user(winner_id)
-            embed = discord.Embed(title="🎉 ยินดีด้วย! 🎉", description=f"{winner.mention} ได้รับ {giveaway['prize']}!",
-                                  color=discord.Color.green())
-            await giveaway["embed_message"].channel.send(embed=embed)
-    else:
-        await giveaway["embed_message"].channel.send("ไม่มีผู้เข้าร่วมเพียงพอสำหรับการจับรางวัล")
+    if giveaway:
+        giveaway["embed"].set_field_at(2, name="ระยะเวลานับถอยหลัง:", value="หมดเวลา", inline=False)
+        await giveaway["embed_message"].edit(embed=giveaway["embed"], view=None)
+
+        if giveaway["entries"]:
+            winners = random.sample(giveaway["entries"], min(giveaway["winners"], len(giveaway["entries"])))
+            for winner_id in winners:
+                winner = bot.get_user(winner_id)
+                if winner:
+                    embed = discord.Embed(title="🎉 ยินดีด้วย! 🎉",
+                                          description=f"{winner.mention} ได้รับ {giveaway['prize']}!",
+                                          color=discord.Color.green())
+                    await giveaway["embed_message"].channel.send(embed=embed)
+        else:
+            await giveaway["embed_message"].channel.send("ไม่มีผู้เข้าร่วมเพียงพอสำหรับการจับรางวัล")
 # ------------------------------------------------------------------------------------------
 server_on()
 bot.run(os.getenv('TOKEN'))
