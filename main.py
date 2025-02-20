@@ -5,6 +5,8 @@ from discord import app_commands
 import asyncio
 import pytz
 import datetime
+import random
+from datetime import datetime, timedelta
 from myserver import server_on
 from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS
 # แยก import ให้ชัดเจน
@@ -12,7 +14,7 @@ from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
 from database import set_notification_room, set_notification_role
 from database import broadcast_channels, notification_room, notification_role, boss_notifications
 from scheduler import schedule_boss_notifications
-from database import bp_data, bp_reactions, bp_summary_room
+from database import bp_data, bp_reactions, bp_summary_room,giveaways
 
 intents = discord.Intents.default()
 intents.messages = True  # ✅ เปิดการอ่านข้อความ
@@ -29,31 +31,7 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
 # //////////////////////////// คำสั่งดูตั้งค่าของเซิร์ฟเวอร์ ////////////////////////////
-@bot.tree.command(name="server_settings", description="ดูการตั้งค่าของเซิร์ฟเวอร์")
-async def server_settings(interaction: discord.Interaction):
-    guild_id = interaction.guild_id
 
-    # ดึงข้อมูลของเซิร์ฟเวอร์นี้
-    broadcast_channels_list = broadcast_channels.get(guild_id, [])
-    notification_room_id = notification_room.get(guild_id)
-    notification_role_id = notification_role.get(guild_id)
-
-    # แปลง broadcast channels ให้เป็นข้อความ รองรับสูงสุด 5 ช่อง
-    if broadcast_channels_list:
-        broadcast_channels_text = "\n".join([f"<#{channel_id}>" for channel_id in broadcast_channels_list[:5]])
-    else:
-        broadcast_channels_text = "❌ ไม่มีการตั้งค่าห้องบอร์ดแคสต์"
-    notification_room_text = f"<#{notification_room_id}>" if notification_room_id else "❌ ยังไม่ได้ตั้งค่าห้องแจ้งเตือนบอส"
-    notification_role_text = f"<@&{notification_role_id}>" if notification_role_id else "❌ ยังไม่ได้ตั้งค่า Role แจ้งเตือนบอส"
-
-    # Embed ข้อมูล
-    embed = discord.Embed(title="⚙️ Server Settings", color=discord.Color.blue())
-    embed.add_field(name="📢 Broadcast Channels", value=broadcast_channels_text, inline=False)
-    embed.add_field(name="🔔 Notification Room", value=notification_room_text, inline=False)
-    embed.add_field(name="👥 Notification Role", value=notification_role_text, inline=False)
-
-    # ส่ง embed กลับ
-    await interaction.response.send_message(embed=embed, ephemeral=True)
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง ค่าคือ (86400)"""
@@ -147,7 +125,7 @@ async def broadcast(
     except Exception as e:
         await interaction.followup.send("เกิดข้อผิดพลาดในการส่งข้อความ", ephemeral=True)
         print(f"Error in broadcast: {e}")
-# //////////////////////////// notifications ////////////////////////////
+# //////////////////////////// notifications คำสั่งใช้งานได้แล้ว✅////////////////////////////
 # ----------- ระบบตั้งค่าห้องแจ้งเตือนเวลาบอส ✅ -----------
 @bot.tree.command(name='noti_room', description='ตั้งค่าช่องสำหรับแจ้งเตือนบอส')
 async def noti_room(interaction: discord.Interaction, channel: discord.TextChannel):
@@ -296,7 +274,7 @@ async def notification_list(interaction: discord.Interaction):
             await interaction.followup.send("✅ ประกาศไปที่ห้องแจ้งเตือนเรียบร้อย!", ephemeral=True)
 
     await interaction.followup.send(embed=embed, ephemeral=True, view=ConfirmView(embed))  # ✅ ส่ง Embed ไปพร้อมปุ่ม
-# //////////////////////////// check bp ////////////////////////////
+# //////////////////////////// check bp คำสั่งใช้งานได้แล้ว✅ ////////////////////////////
 @bot.tree.command(name="set_bp", description="ตั้งค่าคะแนน BP ตามอีโมจิ")
 async def set_bp(interaction: discord.Interaction, emoji: str, points: int):
     bp_reactions[emoji] = points
@@ -342,7 +320,7 @@ async def check_bp(interaction: discord.Interaction):
         member = interaction.guild.get_member(user_id)
         mention = member.mention if member else f"<@!{user_id}>"
         description += (f"{idx}. {mention}\n"
-                        f"╰ {bp} BP\n\n")
+                        f"╰ {bp} BP\n")
 
     embed.description = description.strip()  # ลบช่องว่างท้ายข้อความ
     embed.set_footer(text=thread.name)
@@ -380,6 +358,86 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
             await interaction.response.send_message('ไม่พบห้องที่ตั้งค่าไว้', ephemeral=True)
     else:
         await interaction.response.send_message('ยังไม่มีการตั้งค่าห้องสรุปคะแนน', ephemeral=True)
+# //////////////////////////// Giveaway คำสั่งใช้งานได้แล้ว✅////////////////////////////
+class GiveawayModal(discord.ui.Modal, title="สร้างกิจกรรมสุ่มรางวัล"):
+    prize = discord.ui.TextInput(label="ชื่อรางวัล", placeholder="ใส่ชื่อรางวัล", required=True)
+    amount = discord.ui.TextInput(label="จำนวนรางวัล", placeholder="ใส่จำนวนรางวัล", required=True)
+    winners = discord.ui.TextInput(label="จำนวนผู้ชนะ", placeholder="ใส่จำนวนผู้ชนะ", required=True)
+    duration = discord.ui.TextInput(label="ระยะเวลา (s/m/h/d)", placeholder="เช่น 30s, 5m, 2h", required=True)
+    description = discord.ui.TextInput(label="คำอธิบาย", style=discord.TextStyle.long, required=True)
+
+    def __init__(self, interaction: discord.Interaction):
+        super().__init__()
+        self.interaction = interaction
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            amount = int(self.amount.value)
+            winners = int(self.winners.value)
+            duration_seconds = parse_duration(self.duration.value)
+            if duration_seconds is None or duration_seconds < 30 or duration_seconds > 604800:
+                await interaction.response.send_message("ระยะเวลาต้องอยู่ระหว่าง 30 วินาทีถึง 7 วัน (7d)",
+                                                        ephemeral=True)
+                return
+        except ValueError:
+            await interaction.response.send_message("จำนวนรางวัลและจำนวนผู้ชนะต้องเป็นตัวเลข", ephemeral=True)
+            return
+
+        end_time = datetime.utcnow() + timedelta(seconds=duration_seconds)
+        embed = discord.Embed(title=f"🎉 {self.prize.value} 🎉", description=self.description.value,
+                              color=discord.Color.gold())
+        embed.add_field(name="จำนวนรางวัล:", value=str(amount), inline=False)
+        embed.add_field(name="จำนวนผู้ชนะ:", value=str(winners), inline=False)
+        embed.add_field(name="ระยะเวลานับถอยหลัง:", value=f"<t:{int(end_time.timestamp())}:R>", inline=False)
+        embed.add_field(name="จำนวนคนเข้าร่วม:", value="0", inline=False)
+
+        view = JoinButton(interaction.channel.id)
+        message = await interaction.channel.send(embed=embed, view=view)
+        giveaways[interaction.channel.id] = {"prize": self.prize.value, "amount": amount, "winners": winners,
+                                             "entries": [], "end_time": end_time, "embed": embed,
+                                             "embed_message": message}
+        await interaction.response.send_message("กิจกรรมเริ่มต้นแล้ว!", ephemeral=True)
+
+        await asyncio.sleep(duration_seconds)
+        await end_giveaway(interaction.channel.id)
+
+class JoinButton(discord.ui.View):
+    def __init__(self, giveaway_id):
+        super().__init__(timeout=None)
+        self.giveaway_id = giveaway_id
+
+    @discord.ui.button(label="เข้าร่วม", style=discord.ButtonStyle.green)
+    async def join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        giveaway = giveaways.get(self.giveaway_id)
+        if giveaway:
+            if interaction.user.id in giveaway["entries"]:
+                await interaction.response.send_message("คุณเข้าร่วมแล้ว!", ephemeral=True)
+            else:
+                giveaway["entries"].append(interaction.user.id)
+                await interaction.response.send_message("✅ คุณเข้าร่วมแล้ว!", ephemeral=True)
+
+@bot.tree.command(name="gcreate", description="สร้างกิจกรรมสุ่มรางวัล")
+async def gcreate(interaction: discord.Interaction):
+    await interaction.response.send_modal(GiveawayModal(interaction))
+
+def parse_duration(duration: str):
+    units = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    try:
+        return int(duration[:-1]) * units[duration[-1]]
+    except:
+        return None
+
+async def end_giveaway(channel_id):
+    giveaway = giveaways.pop(channel_id, None)
+    if giveaway and giveaway["entries"]:
+        winners = random.sample(giveaway["entries"], min(giveaway["winners"], len(giveaway["entries"])))
+        for winner_id in winners:
+            winner = bot.get_user(winner_id)
+            embed = discord.Embed(title="🎉 ยินดีด้วย! 🎉", description=f"{winner.mention} ได้รับ {giveaway['prize']}!",
+                                  color=discord.Color.green())
+            await giveaway["embed_message"].channel.send(embed=embed)
+    else:
+        await giveaway["embed_message"].channel.send("ไม่มีผู้เข้าร่วมเพียงพอสำหรับการจับรางวัล")
 # ------------------------------------------------------------------------------------------
 server_on()
 bot.run(os.getenv('TOKEN'))

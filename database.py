@@ -9,6 +9,7 @@ boss_notifications = {}  # เพิ่มตัวแปรสำหรับ�
 bp_summary_room = {}
 bp_reactions = {}
 bp_data = {}
+giveaways = {}
 # ------------------ Broadcast management ------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
     """เพิ่มช่องสำหรับ broadcast ในเซิร์ฟเวอร์ที่กำหนด"""
