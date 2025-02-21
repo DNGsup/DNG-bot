@@ -39,7 +39,7 @@ def update_bp_to_sheets(data, thread_name):
     sheet.update("A1", [["User ID", "Username", "BP", "Thread name"]])
 
     # แปลงข้อมูลให้เป็น List ของ List
-    rows = [[user_id, username, bp, thread_name] for user_id, (username, bp) in data.items()]
+    rows = [[str(user_id), username, bp, thread_name] for user_id, (username, bp) in data.items()]
 
     # อัปเดตลงชีตตั้งแต่แถวที่ 2 เป็นต้นไป
     sheet.append_rows(rows)  # เพิ่มข้อมูลแทนการลบทิ้ง
