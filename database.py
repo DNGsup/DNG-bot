@@ -57,7 +57,7 @@ def update_bp_to_sheets(data, thread_name, guild):
         display_name = extract_number_from_nickname(member.display_name) if member else username
         rows.append([str(user_id), f"'{display_name}", "", bp, thread_name])  # ✅ เว้นช่อง C ไว้ให้สูตร / ใส่เครื่องหมาย ' ข้างหน้าตัวเลข
 
-    cell_range = f"A{start_row}:D{start_row + len(rows) - 1}"
+    cell_range = f"A{start_row}:E{start_row + len(rows) - 1}"
     sheet.update(cell_range, rows, value_input_option="RAW")  # ✅ เขียนลงแถวว่าง
 # ------------------ Broadcast management ------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
