@@ -48,14 +48,14 @@ def update_bp_to_sheets(data, thread_name, guild):
 
     # ไม่ต้องอัปเดตหัวตารางซ้ำทุกครั้ง
     if sheet.cell(1, 1).value is None:
-        sheet.update("A1", [["User ID", "Nickname", "BP", "Thread name"]])
+        sheet.update("A1", [["User ID", "No.", "name", "BP", "Thread name"]])
 
     start_row = find_empty_row(sheet)  # ✅ หาแถวว่าง
     rows = []
     for user_id, (username, bp) in data.items():
         member = guild.get_member(int(user_id))
         display_name = extract_number_from_nickname(member.display_name) if member else username
-        rows.append([str(user_id), display_name, bp, thread_name])
+        rows.append([str(user_id), f"'{display_name}", "", bp, thread_name])  # ✅ เว้นช่อง C ไว้ให้สูตร / ใส่เครื่องหมาย ' ข้างหน้าตัวเลข
 
     cell_range = f"A{start_row}:D{start_row + len(rows) - 1}"
     sheet.update(cell_range, rows, value_input_option="RAW")  # ✅ เขียนลงแถวว่าง
