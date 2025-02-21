@@ -305,14 +305,19 @@ async def check_bp(interaction: discord.Interaction):
             continue
 
         member = interaction.guild.get_member(message.author.id)  # ✅ ดึงข้อมูลจากเซิร์ฟเวอร์
-        display_name = str(member.display_name) if member else str(message.author.name)
-
+        display_name = interaction.guild.get_member(message.author.id)
+        display_name = display_name.display_name if display_name else message.author.name
+        
         if message.author.id not in user_bp:
             user_bp[message.author.id] = (display_name, 0)  # ✅ ใช้ชื่อเล่น
 
         for reaction in message.reactions:
             if str(reaction.emoji) in bp_reactions:
-                if reaction.count > 0:  # ✅ นับแค่ 1 ครั้ง ต่อ 1 รีแอคชั่น
+                async for user in reaction.users():
+                    if user.bot:
+                        continue  # ✅ ข้ามบอท
+                    if message.author.id not in user_bp:
+                        user_bp[message.author.id] = (display_name, 0)  # ✅ ป้องกันการข้ามข้อมูล
                     user_bp[message.author.id] = (
                         display_name,
                         user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)]
