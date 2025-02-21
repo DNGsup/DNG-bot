@@ -32,14 +32,18 @@ def init_sheets():
 client = init_sheets()
 sheet = client.open("Data form DC").worksheet("BossPoints")  # ตรวจสอบชื่อชีตให้ตรง
 # ------------------
-def update_bp_to_sheets(data, thread_name):
+def update_bp_to_sheets(data, thread_name, guild):
     """อัปเดตคะแนน BP ไปยัง Google Sheets โดยระบุชื่อเธรด"""
 
     # ตั้งค่าหัวตาราง (อยู่ที่แถวที่ 1)
     sheet.update("A1", [["User ID", "Username", "BP", "Thread name"]])
 
     # แปลงข้อมูลให้เป็น List ของ List
-    rows = [[str(user_id), username, bp, thread_name] for user_id, (username, bp) in data.items()]
+    rows = []
+    for user_id, (username, bp) in data.items():
+        member = guild.get_member(int(user_id))
+        display_name = member.display_name if member else username  # ใช้ชื่อเล่นแทน
+        rows.append([str(user_id), display_name, bp, thread_name])
 
     # อัปเดตลงชีตตั้งแต่แถวที่ 2 เป็นต้นไป
     sheet.append_rows(rows)  # เพิ่มข้อมูลแทนการลบทิ้ง

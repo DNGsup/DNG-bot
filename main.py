@@ -320,14 +320,14 @@ async def check_bp(interaction: discord.Interaction):
                         user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)] # ✅ ใช้ index [1] เพื่อบวก BP
                     )
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1][1], reverse=True)
-    update_bp_to_sheets(dict(sorted_bp), thread_name) # ✅ ส่งข้อมูลไป Google Sheets พร้อมชื่อเธรด
+    update_bp_to_sheets(dict(sorted_bp), thread_name, interaction.guild) # ✅ ส่งข้อมูลไป Google Sheets พร้อมชื่อเธรด
     embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())    # 🔥 สร้าง Embed สำหรับส่งผลลัพธ์ใน Discord
 
     description = ""
     for idx, (user_id, (username, bp)) in enumerate(sorted_bp, 1):
         member = interaction.guild.get_member(user_id)  # ✅ ดึงข้อมูลสมาชิกจากเซิร์ฟเวอร์
         mention = member.mention if member else f"<@{user_id}>"  # ✅ ใช้ mention ถ้ามีข้อมูล
-        description += f"{mention} - {username}\n╰ {bp} BP\n\n"  # ✅ แสดง BP ถูกต้อง
+        description += f"{mention}\n╰ {bp} BP\n\n"  # ✅ แสดง BP ถูกต้อง
 
     embed.description = description.strip()  # ลบช่องว่างท้ายข้อความ
     embed.set_footer(text=thread.name)
