@@ -48,7 +48,7 @@ def update_bp_to_sheets(data, thread_name, guild):
     rows = []
     for user_id, (username, bp) in data.items():
         member = guild.get_member(int(user_id))
-        display_name = member.display_name if member else username  # ✅ ใช้ชื่อเล่น
+        display_name = str(member.display_name) if member else str(username)  # ✅ แปลงเป็น str เพื่อป้องกันข้อผิดพลาด
         rows.append([str(user_id), display_name, bp, thread_name])
 
     cell_range = f"A{start_row}:D{start_row + len(rows) - 1}"
