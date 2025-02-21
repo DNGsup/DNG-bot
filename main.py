@@ -306,7 +306,7 @@ async def check_bp(interaction: discord.Interaction):
 
         member = interaction.guild.get_member(message.author.id)  # ✅ ดึงข้อมูลจากเซิร์ฟเวอร์
         display_name = member.display_name if member else message.author.name
-        print(f"🔍 ตรวจสอบชื่อ: UserID={message.author.id}, Nickname={display_name}, Username={message.author.name}")
+        print(f"🔍 ตรวจสอบชื่อ: UserID={message.author.id}, Nickname={display_name}, Username={message.author.name}", flush=True)
 
         if message.author.id not in user_bp:
             user_bp[message.author.id] = (display_name, 0)  # ✅ ใช้ชื่อเล่น
