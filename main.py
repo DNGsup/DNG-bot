@@ -297,6 +297,7 @@ async def check_bp(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True, ephemeral=True)
 
     thread = interaction.channel
+    thread_name = thread.name  # ดึงชื่อเธรด
     user_bp = {}
 
     async for message in thread.history(limit=None):
@@ -314,7 +315,7 @@ async def check_bp(interaction: discord.Interaction):
                     user_bp[message.author.id] += bp_reactions[str(reaction.emoji)]
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1], reverse=True)
-    update_bp_to_sheets(dict(sorted_bp))  # ส่งข้อมูลไปยัง Google Sheets
+    update_bp_to_sheets(dict(sorted_bp), thread_name) # ✅ ส่งข้อมูลไป Google Sheets พร้อมชื่อเธรด
     embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())
 
     description = ""
