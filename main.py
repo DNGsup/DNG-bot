@@ -305,18 +305,20 @@ async def check_bp(interaction: discord.Interaction):
             continue
 
         if message.author.id not in user_bp:
-            user_bp[message.author.id] = 0
+            user_bp[message.author.id] = (message.author.name, 0)  # ✅ ต้องกำหนดเป็น tuple
 
         for reaction in message.reactions:
             if str(reaction.emoji) in bp_reactions:
                 async for user in reaction.users():
                     if user.bot:
                         continue
-                    user_bp[message.author.id] += bp_reactions[str(reaction.emoji)]
-
-    sorted_bp = sorted(user_bp.items(), key=lambda x: x[1], reverse=True)
+                    user_bp[message.author.id] = (
+                        message.author.name,  # ✅ ใส่ชื่อให้ถูกต้อง
+                        user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)]  # ✅ ใช้ index [1] เพื่อบวก BP
+                    )
+    sorted_bp = sorted(user_bp.items(), key=lambda x: x[1][1], reverse=True)
     update_bp_to_sheets(dict(sorted_bp), thread_name) # ✅ ส่งข้อมูลไป Google Sheets พร้อมชื่อเธรด
-    embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())
+    embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())    # 🔥 สร้าง Embed สำหรับส่งผลลัพธ์ใน Discord
 
     description = ""
     for idx, (user_id, bp) in enumerate(sorted_bp, 1):
