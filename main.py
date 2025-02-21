@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from myserver import server_on
 from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS
 # แยก import ให้ชัดเจน
+from database import update_bp_to_sheets
 from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
 from database import set_notification_room, set_notification_role
 from database import broadcast_channels, notification_room, notification_role, boss_notifications
@@ -313,6 +314,7 @@ async def check_bp(interaction: discord.Interaction):
                     user_bp[message.author.id] += bp_reactions[str(reaction.emoji)]
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1], reverse=True)
+    update_bp_to_sheets(dict(sorted_bp))  # ส่งข้อมูลไปยัง Google Sheets
     embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())
 
     description = ""

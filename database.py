@@ -1,4 +1,7 @@
-# import json
+import json
+import os
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # กำหนดตัวแปรฐานข้อมูลให้เป็น dictionary ว่างก่อน
 broadcast_channels = {}
@@ -11,6 +14,35 @@ bp_data = {} # สำหรับเก็บคะแนน
 giveaway_room = {}  # ห้องสำหรับจัดกิจกรรม
 giveaways = {}       # ข้อมูลของกิจกรรม
 winner_history = {} # ✅ เก็บจำนวนครั้งที่ผู้ใช้เคยชนะ (ในหน่วยความจำ)
+# ------------------ ตั้งค่า Google Sheets API ------------------
+def init_sheets():
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+    # โหลด Credentials จาก Render Environment Variables
+    credentials_json = os.getenv("GCP_CREDENTIALS")
+    if not credentials_json:
+        raise ValueError("❌ ไม่พบ GCP_CREDENTIALS ใน Environment Variables")
+
+    creds_dict = json.loads(credentials_json)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+
+    client = gspread.authorize(creds)
+    return client
+
+client = init_sheets()
+sheet = client.open("Data form DC").worksheet("BossPoints")  # ตรวจสอบชื่อชีตให้ตรง
+# ------------------
+def update_bp_to_sheets(data, thread_name):
+    """อัปเดตคะแนน BP ไปยัง Google Sheets โดยระบุชื่อเธรด"""
+
+    # ตั้งค่าหัวตาราง (อยู่ที่แถวที่ 1)
+    sheet.update("A1", [["User ID", "Username", "BP", "Thread name"]])
+
+    # แปลงข้อมูลให้เป็น List ของ List
+    rows = [[user_id, username, bp, thread_name] for user_id, (username, bp) in data.items()]
+
+    # อัปเดตลงชีตตั้งแต่แถวที่ 2 เป็นต้นไป
+    sheet.append_rows(rows)  # เพิ่มข้อมูลแทนการลบทิ้ง
 # ------------------ Broadcast management ------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
     """เพิ่มช่องสำหรับ broadcast ในเซิร์ฟเวอร์ที่กำหนด"""
