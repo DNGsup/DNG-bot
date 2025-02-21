@@ -42,13 +42,13 @@ def update_bp_to_sheets(data, thread_name, guild):
 
     # ไม่ต้องอัปเดตหัวตารางซ้ำทุกครั้ง
     if sheet.cell(1, 1).value is None:
-        sheet.update("A1", [["User ID", "Username", "BP", "Thread name"]])
+        sheet.update("A1", [["User ID", "Nickname", "BP", "Thread name"]])
 
     start_row = find_empty_row(sheet)  # ✅ หาแถวว่าง
     rows = []
     for user_id, (username, bp) in data.items():
         member = guild.get_member(int(user_id))
-        display_name = member.display_name if member else username  # ✅ ใช้ชื่อเล่น
+        display_name = member.display_name if member else username  # ✅ ใช้ชื่อเล่นแน่นอน
         rows.append([str(user_id), display_name, bp, thread_name])
 
     cell_range = f"A{start_row}:D{start_row + len(rows) - 1}"

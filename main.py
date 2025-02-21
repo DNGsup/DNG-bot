@@ -305,9 +305,9 @@ async def check_bp(interaction: discord.Interaction):
             continue
 
         member = interaction.guild.get_member(message.author.id)  # ✅ ดึงข้อมูลจากเซิร์ฟเวอร์
-        display_name = interaction.guild.get_member(message.author.id)
-        display_name = display_name.display_name if display_name else message.author.name
-        
+        display_name = member.display_name if member else message.author.name
+        print(f"🔍 ตรวจสอบชื่อ: UserID={message.author.id}, Nickname={display_name}, Username={message.author.name}")
+
         if message.author.id not in user_bp:
             user_bp[message.author.id] = (display_name, 0)  # ✅ ใช้ชื่อเล่น
 
@@ -324,7 +324,7 @@ async def check_bp(interaction: discord.Interaction):
                     )
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1][1], reverse=True)
-    update_bp_to_sheets(dict(sorted_bp), thread_name, interaction.guild) # ✅ ส่งข้อมูลไป Google Sheets พร้อมชื่อเธรด
+    update_bp_to_sheets(user_bp, thread_name, interaction.guild)  # ✅ ส่งค่าที่มี Nickname แล้ว
     embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())    # 🔥 สร้าง Embed สำหรับส่งผลลัพธ์ใน Discord
 
     description = ""
