@@ -1,4 +1,5 @@
 import os
+import re  # ✅ เพิ่ม import re สำหรับ regex
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -10,6 +11,7 @@ from datetime import datetime, timedelta
 from myserver import server_on
 from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS
 # แยก import ให้ชัดเจน
+from database import extract_number_from_nickname  # ✅ เรียกใช้จาก database.py
 from database import update_bp_to_sheets
 from database import add_broadcast_channel, remove_broadcast_channel, get_rooms
 from database import set_notification_room, set_notification_role
@@ -31,8 +33,7 @@ async def on_ready():
         print(f"✅ Synced {len(synced)} commands")
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
-# //////////////////////////// คำสั่งดูตั้งค่าของเซิร์ฟเวอร์ ////////////////////////////
-
+# //////////////////////////// extract_number_from_nickname ////////////////////////////
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง ค่าคือ (86400)"""
@@ -305,22 +306,21 @@ async def check_bp(interaction: discord.Interaction):
             continue
 
         member = await interaction.guild.fetch_member(message.author.id)  # ✅ ใช้ fetch_member() ดึงข้อมูลสดๆ
-        display_name = member.display_name if member else message.author.name
-        print(
-            f"🔍 ตรวจสอบชื่อ (แก้ไขแล้ว): UserID={message.author.id}, Nickname={display_name}, Username={message.author.name}")
+        raw_nickname = member.display_name if member else message.author.name  # ✅ ดึงชื่อเล่นจากเซิร์ฟเวอร์
+        nickname_number = extract_number_from_nickname(raw_nickname)  # ✅ ดึงเฉพาะตัวเลข 5 หลัก
+
+        print(f"🔍 ตรวจสอบชื่อ: UserID={message.author.id}, Raw Nickname={raw_nickname}, Extracted={nickname_number}")
 
         if message.author.id not in user_bp:
-            user_bp[message.author.id] = (display_name, 0)  # ✅ ใช้ชื่อเล่น
+            user_bp[message.author.id] = (nickname_number, 0)  # ✅ ใช้ตัวเลข 5 หลักที่ดึงมา
 
         for reaction in message.reactions:
             if str(reaction.emoji) in bp_reactions:
                 async for user in reaction.users():
                     if user.bot:
                         continue  # ✅ ข้ามบอท
-                    if message.author.id not in user_bp:
-                        user_bp[message.author.id] = (display_name, 0)  # ✅ ป้องกันการข้ามข้อมูล
                     user_bp[message.author.id] = (
-                        display_name,
+                        nickname_number,
                         user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)]
                     )
 

@@ -1,5 +1,6 @@
 import json
 import os
+import re  # ✅ ใช้ Regular Expression
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -14,6 +15,11 @@ bp_data = {} # สำหรับเก็บคะแนน
 giveaway_room = {}  # ห้องสำหรับจัดกิจกรรม
 giveaways = {}       # ข้อมูลของกิจกรรม
 winner_history = {} # ✅ เก็บจำนวนครั้งที่ผู้ใช้เคยชนะ (ในหน่วยความจำ)
+# ------------------ extract_number_from_nickname ------------------
+def extract_number_from_nickname(nickname):
+    """ดึงเฉพาะตัวเลข 5 หลักแรกจาก Nickname"""
+    match = re.search(r'\d{5}', nickname)  # ✅ ค้นหาเลข 5 หลักแรกที่พบ
+    return match.group(0) if match else nickname  # ✅ ถ้ามีเลข 5 หลัก ให้ใช้เลขนั้น ถ้าไม่มีให้ใช้ชื่อเดิม
 # ------------------ ตั้งค่า Google Sheets API ------------------
 def init_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -48,7 +54,7 @@ def update_bp_to_sheets(data, thread_name, guild):
     rows = []
     for user_id, (username, bp) in data.items():
         member = guild.get_member(int(user_id))
-        display_name = member.display_name if member else username  # ✅ ใช้ชื่อเล่นแน่นอน
+        display_name = extract_number_from_nickname(member.display_name) if member else username
         rows.append([str(user_id), display_name, bp, thread_name])
 
     cell_range = f"A{start_row}:D{start_row + len(rows) - 1}"
