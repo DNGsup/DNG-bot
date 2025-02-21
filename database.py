@@ -32,21 +32,27 @@ def init_sheets():
 client = init_sheets()
 sheet = client.open("Data form DC").worksheet("BossPoints")  # ตรวจสอบชื่อชีตให้ตรง
 # ------------------
+def find_empty_row(sheet):
+    """ ค้นหาแถวแรกที่ว่างใน Google Sheets """
+    col_values = sheet.col_values(1)  # ดึงค่าทั้งคอลัมน์ A
+    return len(col_values) + 1  # หาตำแหน่งแถวว่างแถวถัดไป
+# ------------------
 def update_bp_to_sheets(data, thread_name, guild):
     """อัปเดตคะแนน BP ไปยัง Google Sheets โดยระบุชื่อเธรด"""
 
-    # ตั้งค่าหัวตาราง (อยู่ที่แถวที่ 1)
-    sheet.update("A1", [["User ID", "Username", "BP", "Thread name"]])
+    # ไม่ต้องอัปเดตหัวตารางซ้ำทุกครั้ง
+    if sheet.cell(1, 1).value is None:
+        sheet.update("A1", [["User ID", "Username", "BP", "Thread name"]])
 
-    # แปลงข้อมูลให้เป็น List ของ List
+    start_row = find_empty_row(sheet)  # ✅ หาแถวว่าง
     rows = []
     for user_id, (username, bp) in data.items():
         member = guild.get_member(int(user_id))
-        display_name = member.display_name if member else username  # ใช้ชื่อเล่นแทน
+        display_name = member.display_name if member else username  # ✅ ใช้ชื่อเล่น
         rows.append([str(user_id), display_name, bp, thread_name])
 
-    # อัปเดตลงชีตตั้งแต่แถวที่ 2 เป็นต้นไป
-    sheet.append_rows(rows)  # เพิ่มข้อมูลแทนการลบทิ้ง
+    cell_range = f"A{start_row}:D{start_row + len(rows) - 1}"
+    sheet.update(cell_range, rows, value_input_option="RAW")  # ✅ เขียนลงแถวว่าง
 # ------------------ Broadcast management ------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
     """เพิ่มช่องสำหรับ broadcast ในเซิร์ฟเวอร์ที่กำหนด"""

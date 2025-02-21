@@ -312,13 +312,12 @@ async def check_bp(interaction: discord.Interaction):
 
         for reaction in message.reactions:
             if str(reaction.emoji) in bp_reactions:
-                async for user in reaction.users():
-                    if user.bot:
-                        continue
+                if reaction.count > 0:  # ✅ นับแค่ 1 ครั้ง ต่อ 1 รีแอคชั่น
                     user_bp[message.author.id] = (
-                        display_name,  # ✅ ใช้ชื่อเล่น
-                        user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)] # ✅ ใช้ index [1] เพื่อบวก BP
+                        display_name,
+                        user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)]
                     )
+
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1][1], reverse=True)
     update_bp_to_sheets(dict(sorted_bp), thread_name, interaction.guild) # ✅ ส่งข้อมูลไป Google Sheets พร้อมชื่อเธรด
     embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())    # 🔥 สร้าง Embed สำหรับส่งผลลัพธ์ใน Discord
