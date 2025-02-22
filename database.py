@@ -15,12 +15,12 @@ bp_data = {} # สำหรับเก็บคะแนน
 giveaway_room = {}  # ห้องสำหรับจัดกิจกรรม
 giveaways = {}       # ข้อมูลของกิจกรรม
 winner_history = {} # ✅ เก็บจำนวนครั้งที่ผู้ใช้เคยชนะ (ในหน่วยความจำ)
-# ------------------ extract_number_from_nickname ------------------
+# ------------------ extract_number_from_nickname ✅------------------
 def extract_number_from_nickname(nickname):
     """ดึงเฉพาะตัวเลข 5 หลักแรกจาก Nickname"""
     match = re.search(r'\d{5}', nickname)  # ✅ ค้นหาเลข 5 หลักแรกที่พบ
     return match.group(0) if match else nickname  # ✅ ถ้ามีเลข 5 หลัก ให้ใช้เลขนั้น ถ้าไม่มีให้ใช้ชื่อเดิม
-# ------------------ ตั้งค่า Google Sheets API ------------------
+# ------------------ ตั้งค่า Google Sheets API ✅------------------
 def init_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 

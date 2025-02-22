@@ -349,15 +349,29 @@ async def check_bp(interaction: discord.Interaction):
     else:
         await interaction.response.send_message('ยังไม่มีการตั้งค่าห้องสรุปคะแนน', ephemeral=True)
 
-@bot.tree.command(name="add_bp",description="เพิ่มคะแนน BP ให้สมาชิกในเธรดที่ใช้งานอยู่")
+@bot.tree.command(name="add_bp", description="เพิ่มคะแนน BP ให้สมาชิกในเธรดที่ใช้งานอยู่")
 async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int):
     if not isinstance(interaction.channel, discord.Thread):
         await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
         return
+
     await interaction.response.defer(thinking=True, ephemeral=True)
 
     thread = interaction.channel
+    thread_name = thread.name  # ✅ ดึงชื่อเธรด
+    member = await interaction.guild.fetch_member(user.id)  # ✅ ดึงข้อมูลสมาชิกสดๆ
+    raw_nickname = member.display_name if member else user.name  # ✅ ดึงชื่อเล่นจากเซิร์ฟเวอร์
+    nickname_number = extract_number_from_nickname(raw_nickname)  # ✅ ดึงเฉพาะตัวเลข 5 หลัก
+
+    print(f"🔍 ตรวจสอบชื่อ: UserID={user.id}, Raw Nickname={raw_nickname}, Extracted={nickname_number}")
+
+    # ✅ เพิ่มคะแนนให้กับ BP ของผู้ใช้
     bp_data[user.id] = bp_data.get(user.id, 0) + bp
+
+    # ✅ เตรียมข้อมูลเพื่อบันทึกลง Google Sheets โดยไม่เขียนทับสูตรในคอลัมน์ C
+    user_bp = {user.id: (nickname_number, bp_data[user.id])}
+
+    update_bp_to_sheets(user_bp, thread_name, interaction.guild)  # ✅ บันทึกข้อมูลลง Google Sheets
 
     embed = discord.Embed(title="💎 บวกคะแนน BP", description=f"<@!{user.id}> : {bp} BP", color=discord.Color.blue())
     embed.set_footer(text=thread.name)
