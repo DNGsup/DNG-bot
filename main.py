@@ -4,9 +4,8 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import asyncio
-import pytz
-import datetime
 import random
+import pytz
 from datetime import datetime, timedelta
 from myserver import server_on
 from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS
@@ -18,7 +17,11 @@ from database import set_notification_room, set_notification_role
 from database import broadcast_channels, notification_room, notification_role, boss_notifications
 from scheduler import schedule_boss_notifications
 from database import bp_data, bp_reactions, bp_summary_room,giveaways ,giveaway_room ,winner_history
-
+from database import (load_settings,save_settings,
+    notification_room,notification_role,
+    bp_summary_room,bp_reactions,
+    giveaway_room,winner_history
+)
 intents = discord.Intents.default()
 intents.messages = True  # ✅ เปิดการอ่านข้อความ
 intents.message_content = True  # ✅ เปิดการเข้าถึงเนื้อหาข้อความ
@@ -28,6 +31,7 @@ local_tz = pytz.timezone('Asia/Bangkok')  # ใช้เวลาประเท
 @bot.event
 async def on_ready():
     print("Bot Online!")
+    load_settings()  # ✅ โหลดข้อมูลตั้งค่าจากชีท
     try:
         synced = await bot.tree.sync()
         print(f"✅ Synced {len(synced)} commands")
@@ -197,7 +201,7 @@ async def notification(
     # ถ้าไม่มี role เลย ให้แท็ก @everyone แทน
     role_mention = f"<@&{role_id}>" if role else "@everyone"
 
-    now = datetime.datetime.now(local_tz)  # ✅ ใช้ timezone ที่กำหนด
+    now = datetime.now(local_tz)   # ✅ ใช้ timezone ที่กำหนด
     spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)
 
     if guild_id not in boss_notifications:
@@ -222,7 +226,7 @@ async def notification_list(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)  # ลดดีเลย์จากการ defer
 
     guild_id = interaction.guild_id
-    now = datetime.datetime.now(local_tz)
+    now = datetime.now(local_tz) 
 
     # ✅ แทนที่การลบจริงด้วยการสร้างตัวแปรใหม่เพื่อแสดงผล
     active_notifications = [
