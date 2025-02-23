@@ -650,16 +650,6 @@ class ToolsView(discord.ui.View):
         else:
             await interaction.followup.send("❌ ไม่พบคำสั่ง /gcreate", ephemeral=True)
 # ------------------- MyBot -------------------
-class MyBot(commands.Bot):
-    def __init__(self):
-        intents = discord.Intents.default()
-        super().__init__(command_prefix="/", intents=intents)
-
-    async def setup_hook(self):
-        await self.tree.sync()
-        print("✅ Commands synced successfully!")
-
-bot = MyBot()
 # ------------------- setting -------------------
 @bot.tree.command(name="settings", description="ตั้งค่าระบบบอท")
 async def settings(interaction: discord.Interaction):
