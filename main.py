@@ -20,6 +20,8 @@ from scheduler import schedule_boss_notifications
 from database import bp_data, bp_reactions, bp_summary_room,giveaways ,giveaway_room ,winner_history
 
 intents = discord.Intents.default()
+intents.guilds = True  # ✅ เปิดการเข้าถึงข้อมูลเซิร์ฟเวอร์
+intents.members = True  # ✅ เปิดการเข้าถึงข้อมูลสมาชิก
 intents.messages = True  # ✅ เปิดการอ่านข้อความ
 intents.message_content = True  # ✅ เปิดการเข้าถึงเนื้อหาข้อความ
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -544,44 +546,67 @@ class SettingView(discord.ui.View):
 
     @discord.ui.button(label="📌 เพิ่มห้องสำหรับบอร์ดแคส", style=discord.ButtonStyle.primary)
     async def add_broadcast_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)  # ✅ ป้องกัน timeout
-        await interaction.client.get_command("broadcast_setting").callback(
-            interaction, action="ADD", channel=interaction.channel
-        )
+        await interaction.response.defer(ephemeral=True)
+        command = bot.tree.get_command("broadcast_setting")
+        if command:
+            await command.callback(interaction, action="ADD", channel=interaction.channel)
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /broadcast_setting", ephemeral=True)
 
     @discord.ui.button(label="📌 ลบห้องสำหรับบอร์ดแคส", style=discord.ButtonStyle.danger)
     async def remove_broadcast_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-        await interaction.client.get_command("broadcast_setting").callback(
-            interaction, action="REMOVE", channel=interaction.channel
-        )
+        command = bot.tree.get_command("broadcast_setting")
+        if command:
+            await command.callback(interaction, action="REMOVE", channel=interaction.channel)
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /broadcast_setting", ephemeral=True)
 
     @discord.ui.button(label="📌 ตั้งค่าโรลสำหรับแจ้งเตือน", style=discord.ButtonStyle.secondary)
     async def set_notification_role(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-        await interaction.client.get_command("noti_role").callback(interaction, role=None)
+        command = bot.tree.get_command("noti_role")
+        if command:
+            await command.callback(interaction, role=None)
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /noti_role", ephemeral=True)
 
     @discord.ui.button(label="📌 ตั้งค่าห้องสำหรับแจ้งเตือน", style=discord.ButtonStyle.secondary)
     async def set_notification_room(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-        await interaction.client.get_command("noti_room").callback(interaction, channel=interaction.channel)
+        command = bot.tree.get_command("noti_room")
+        if command:
+            await command.callback(interaction, channel=interaction.channel)
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /noti_room", ephemeral=True)
 
     @discord.ui.button(label="📌 ตั้งค่าห้องสำหรับสรุปคะแนน", style=discord.ButtonStyle.secondary)
     async def set_summary_room(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-        await interaction.client.get_command("setting_bproom").callback(interaction, room=interaction.channel)
+        command = bot.tree.get_command("setting_bproom")
+        if command:
+            await command.callback(interaction, room=interaction.channel)
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /setting_bproom", ephemeral=True)
 
     @discord.ui.button(label="📌 ตั้งค่าคะแนน BP ตามอีโมจิ", style=discord.ButtonStyle.secondary)
     async def set_bp(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-        await interaction.client.get_command("set_bp").callback(interaction, emoji="🔥", points=10)
+        command = bot.tree.get_command("set_bp")
+        if command:
+            await command.callback(interaction, emoji="🔥", points=10)
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /set_bp", ephemeral=True)
 
     @discord.ui.button(label="📌 ตั้งค่าห้องจัดกิจกรรม", style=discord.ButtonStyle.secondary)
     async def set_giveaway_room(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-        await interaction.client.get_command("setgiveaway").callback(interaction, channel=interaction.channel)
+        command = bot.tree.get_command("setgiveaway")
+        if command:
+            await command.callback(interaction, channel=interaction.channel)
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /setgiveaway", ephemeral=True)
 
-    # ✅ ปิดปุ่มหลังจาก timeout เพื่อไม่ให้เกิด Memory Leak
     async def on_timeout(self):
         for child in self.children:
             child.disabled = True  # ปิดการใช้งานปุ่มทั้งหมด
@@ -593,23 +618,37 @@ class ToolsView(discord.ui.View):
 
     @discord.ui.button(label="📌 บอร์ดแคส", style=discord.ButtonStyle.primary)
     async def broadcast(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.client.get_command("broadcast").callback(
-            interaction, mode="STANDARD", boss_name="BOSS", date="01/01", hour=12, minute=0, owner="OWNER"
-        )
+        command = bot.tree.get_command("broadcast")
+        if command:
+            await command.callback(
+                interaction, mode="STANDARD", boss_name="BOSS", date="01/01", hour=12, minute=0, owner="OWNER"
+            )
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /broadcast", ephemeral=True)
 
     @discord.ui.button(label="📌 แจ้งเตือน", style=discord.ButtonStyle.primary)
     async def notification(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.client.get_command("notification").callback(
-            interaction, boss_name="BOSS", hours=1, minutes=0, owner="OWNER"
-        )
+        command = bot.tree.get_command("notification")
+        if command:
+            await command.callback(interaction, boss_name="BOSS", hours=1, minutes=0, owner="OWNER")
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /notification", ephemeral=True)
 
     @discord.ui.button(label="📌 รายการแจ้งเตือน", style=discord.ButtonStyle.secondary)
     async def notification_list(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.client.get_command("notification_list").callback(interaction)
+        command = bot.tree.get_command("notification_list")
+        if command:
+            await command.callback(interaction)
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /notification_list", ephemeral=True)
 
     @discord.ui.button(label="📌 จัดกิจกรรมสุ่ม", style=discord.ButtonStyle.primary)
     async def gcreate(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.client.get_command("gcreate").callback(interaction, role=None)
+        command = bot.tree.get_command("gcreate")
+        if command:
+            await command.callback(interaction, role=None)
+        else:
+            await interaction.followup.send("❌ ไม่พบคำสั่ง /gcreate", ephemeral=True)
 # ------------------- MyBot -------------------
 class MyBot(commands.Bot):
     def __init__(self):
@@ -618,6 +657,7 @@ class MyBot(commands.Bot):
 
     async def setup_hook(self):
         await self.tree.sync()
+        print("✅ Commands synced successfully!")
 
 bot = MyBot()
 # ------------------- setting -------------------
