@@ -5,8 +5,8 @@ from discord.ext import commands
 from discord import app_commands
 import asyncio
 import random
-import pytz
 from datetime import datetime, timedelta
+import pytz
 from myserver import server_on
 from enumOptions import BroadcastSettingAction ,BroadcastMode ,BossName ,Owner ,OWNER_ICONS
 # แยก import ให้ชัดเจน
@@ -201,8 +201,8 @@ async def notification(
     # ถ้าไม่มี role เลย ให้แท็ก @everyone แทน
     role_mention = f"<@&{role_id}>" if role else "@everyone"
 
-    now = datetime.now(local_tz)   # ✅ ใช้ timezone ที่กำหนด
-    spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)
+    now = datetime.now(local_tz)  # ✅ ใช้ datetime.now() ถูกต้องแล้ว
+    spawn_time = now + timedelta(hours=hours, minutes=minutes)  # ✅ ใช้ timedelta โดยตรง
 
     if guild_id not in boss_notifications:
         boss_notifications[guild_id] = []
@@ -226,7 +226,7 @@ async def notification_list(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)  # ลดดีเลย์จากการ defer
 
     guild_id = interaction.guild_id
-    now = datetime.now(local_tz) 
+    now = datetime.now(local_tz)  # ✅ ใช้ datetime.now() โดยตรง
 
     # ✅ แทนที่การลบจริงด้วยการสร้างตัวแปรใหม่เพื่อแสดงผล
     active_notifications = [
