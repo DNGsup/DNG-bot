@@ -37,7 +37,12 @@ async def on_ready():
         print(f"✅ Synced {len(synced)} commands")
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
-# //////////////////////////// extract_number_from_nickname ////////////////////////////
+# //////////////////////////// ันทึกค่าทั้งหมดลง Google Sheets ////////////////////////////
+@bot.tree.command(name="force_save", description="บันทึกค่าทั้งหมดลง Google Sheets")
+async def force_save(interaction: discord.Interaction):
+    save_settings()  # ✅ บันทึกค่าทั้งหมดไปยัง Google Sheets ทันที
+    await interaction.response.send_message("✅ บันทึกค่าการตั้งค่าลง Google Sheets เรียบร้อยแล้ว!", ephemeral=True)
+
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง ค่าคือ (86400)"""
