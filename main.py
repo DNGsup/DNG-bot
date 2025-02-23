@@ -282,8 +282,8 @@ async def set_bp(interaction: discord.Interaction, emoji: str, points: int):
     bp_reactions[emoji] = points
     await interaction.response.send_message(f'ตั้งค่าคะแนนให้ {emoji} = {points} BP', ephemeral=True)
 
-@bot.tree.command(name="setting_bproom", description="ตั้งค่าห้องสำหรับสรุปคะแนน")
-async def setting_bproom(interaction: discord.Interaction, room: discord.TextChannel):
+@bot.tree.command(name="set_bproom", description="ตั้งค่าห้องสำหรับสรุปคะแนน")
+async def set_bproom(interaction: discord.Interaction, room: discord.TextChannel):
     bp_summary_room[interaction.guild_id] = room.id
     await interaction.response.send_message(f'ตั้งค่าห้องสรุปคะแนนเป็น {room.mention}', ephemeral=True)
 
@@ -386,8 +386,8 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
         await interaction.response.send_message('ยังไม่มีการตั้งค่าห้องสรุปคะแนน', ephemeral=True)
 # //////////////////////////// Giveaway ////////////////////////////
 # ✅ ตั้งค่าห้องสุ่มรางวัล
-@bot.tree.command(name="setgiveaway", description="ตั้งค่าห้องสำหรับจัดกิจกรรมสุ่มรางวัล")
-async def setgiveaway(interaction: discord.Interaction, channel: discord.TextChannel):
+@bot.tree.command(name="set_giveaway", description="ตั้งค่าห้องสำหรับจัดกิจกรรมสุ่มรางวัล")
+async def set_giveaway(interaction: discord.Interaction, channel: discord.TextChannel):
     guild_id = str(interaction.guild_id)
     giveaway_room[guild_id] = channel.id
     await interaction.response.send_message(f"✅ ตั้งค่าห้อง {channel.mention} สำหรับกิจกรรมสุ่มรางวัลเรียบร้อย!", ephemeral=True)
