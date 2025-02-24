@@ -37,7 +37,7 @@ def init_sheets():
     return client
 
 client = init_sheets()
-sheet = client.open("Data form DC").worksheet("BossPoints")  # ตรวจสอบชื่อชีตให้ตรง
+sheet = client.open("Data form DC").worksheet("BP Ledger")  # ตรวจสอบชื่อชีตให้ตรง
 # ------------------
 def find_empty_row(sheet):
     """ ค้นหาแถวแรกที่ว่างใน Google Sheets """
