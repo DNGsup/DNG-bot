@@ -289,10 +289,12 @@ async def setting_bproom(interaction: discord.Interaction, room: discord.TextCha
 
 # ✅ ฟังก์ชันส่ง embed สรุปคะแนนไปยังห้องสรุป BP
 def send_summary_embed(guild_id: int, embed: discord.Embed):
-    summary_channel = bp_summary_room.get(guild_id)
-    if not summary_channel:
-        return None
-    return bot.get_channel(summary_channel)
+    summary_channel_id = bp_summary_room.get(guild_id)  # ✅ บรรทัดนี้เปลี่ยนตัวแปรให้ถูกต้อง
+    if not summary_channel_id:  # ✅ เช็คค่า id ให้ถูกต้อง
+        return False
+
+    summary_channel = bot.get_channel(summary_channel_id)  # ✅ ใช้ id ที่ถูกต้องในการดึง channel
+    return summary_channel if summary_channel else False
 
 # ✅ ฟังก์ชันคำนวณคะแนน BP
 @bot.tree.command(name="check_bp", description="คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง")
@@ -313,18 +315,22 @@ async def check_bp(interaction: discord.Interaction):
         member = await interaction.guild.fetch_member(message.author.id)
         raw_nickname = member.display_name if member else message.author.name
         nickname_number = extract_number_from_nickname(raw_nickname)
+        print(f"🔍 ตรวจสอบชื่อ: UserID={message.author.id}, Raw Nickname={raw_nickname}, Extracted={nickname_number}")
 
         if message.author.id not in user_bp:
             user_bp[message.author.id] = (nickname_number, 0, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-        for reaction in message.reactions:
-            if str(reaction.emoji) in bp_reactions:
-                async for user in reaction.users():
-                    if user.bot:
-                        continue
-                    bp = user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)]
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    user_bp[message.author.id] = (nickname_number, bp, timestamp)
+        # ✅ นับคะแนนจาก \"ประเภทอีโมจิไม่ซ้ำกัน\" เท่านั้น
+        unique_emojis = set(
+            str(reaction.emoji) for reaction in message.reactions if str(reaction.emoji) in bp_reactions
+        )
+        total_bp = sum(bp_reactions[emoji] for emoji in unique_emojis)  # รวมคะแนนจากอีโมจิไม่ซ้ำ
+        if total_bp > 0:
+            user_bp[message.author.id] = (
+                nickname_number,
+                user_bp[message.author.id][1] + total_bp,  # บวกคะแนนรวม
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1][1], reverse=True)
 
@@ -370,16 +376,12 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
     embed = discord.Embed(title="💎 บวกคะแนน BP", description=f"{user.mention} ได้รับ +{bp} BP", color=discord.Color.blue())
     embed.set_footer(text=thread_name)
 
-    summary_channel = send_summary_embed(interaction.guild_id, embed)
+    summary_channel = send_summary_embed(interaction.guild_id, embed)  # ✅ เพิ่มบรรทัดนี้
     if summary_channel:
-        summary_channel = bot.get_channel(summary_channel)
-        if summary_channel:
-            await summary_channel.send(embed=embed)
-            await interaction.followup.send("✅ บวกคะแนนและส่งสรุปเรียบร้อยแล้ว!", ephemeral=True)
-        else:
-            await interaction.followup.send("⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้!", ephemeral=True)
+        await summary_channel.send(embed=embed)  # ✅ ส่ง embed ไปยังห้องที่ตั้งค่าไว้
+        await interaction.followup.send("✅ บวกคะแนนและส่งสรุปเรียบร้อยแล้ว!", ephemeral=True)
     else:
-        await interaction.followup.send("⚠️ ยังไม่มีการตั้งค่าห้องสรุปคะแนน BP", ephemeral=True)
+        await interaction.followup.send("⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้!", ephemeral=True)
 # ✅ ฟังก์ชันหักคะแนน Bp
 @bot.tree.command(name="withdraw_bp", description="หักคะแนน BP ของสมาชิก")
 async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp: int):
