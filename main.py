@@ -287,6 +287,13 @@ async def setting_bproom(interaction: discord.Interaction, room: discord.TextCha
     bp_summary_room[interaction.guild_id] = room.id
     await interaction.response.send_message(f'ตั้งค่าห้องสรุปคะแนนเป็น {room.mention}', ephemeral=True)
 
+# ✅ ฟังก์ชันส่ง embed สรุปคะแนนไปยังห้องสรุป BP
+def send_summary_embed(guild_id: int, embed: discord.Embed):
+    summary_channel_id = bp_summary_room.get(guild_id)
+    if not summary_channel_id:
+        return None
+    return bot.get_channel(summary_channel_id)
+
 # ✅ ฟังก์ชันคำนวณคะแนน BP
 @bot.tree.command(name="check_bp", description="คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง")
 async def check_bp(interaction: discord.Interaction):
@@ -334,9 +341,9 @@ async def check_bp(interaction: discord.Interaction):
     embed.description = description.strip()
     embed.set_footer(text=thread.name)
 
-    summary_channel_id = bp_summary_room.get(interaction.guild_id)
-    if summary_channel_id:
-        summary_channel = bot.get_channel(summary_channel_id)
+    summary_channel = send_summary_embed(interaction.guild_id, embed)
+    if summary_channel:
+        summary_channel = bot.get_channel(summary_channel)
         if summary_channel:
             await summary_channel.send(embed=embed)
             await interaction.followup.send("✅ ส่งสรุปคะแนนไปยังห้องสรุปเรียบร้อยแล้ว!", ephemeral=True)
@@ -363,9 +370,9 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
     embed = discord.Embed(title="💎 บวกคะแนน BP", description=f"{user.mention} ได้รับ +{bp} BP", color=discord.Color.blue())
     embed.set_footer(text=thread_name)
 
-    summary_channel_id = bp_summary_room.get(interaction.guild_id)
-    if summary_channel_id:
-        summary_channel = bot.get_channel(summary_channel_id)
+    summary_channel = send_summary_embed(interaction.guild_id, embed)
+    if summary_channel:
+        summary_channel = bot.get_channel(summary_channel)
         if summary_channel:
             await summary_channel.send(embed=embed)
             await interaction.followup.send("✅ บวกคะแนนและส่งสรุปเรียบร้อยแล้ว!", ephemeral=True)
