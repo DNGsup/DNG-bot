@@ -290,7 +290,6 @@ async def setting_bproom(interaction: discord.Interaction, room: discord.TextCha
 
 @bot.tree.command(name="check_bp", description="คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง")
 async def check_bp(interaction: discord.Interaction):
-    """ คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง """
     if not isinstance(interaction.channel, discord.Thread):
         await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
         return
@@ -298,7 +297,7 @@ async def check_bp(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True, ephemeral=True)
 
     thread = interaction.channel
-    thread_name = thread.name  # ดึงชื่อเธรด
+    thread_name = thread.name
     user_bp = {}
 
     async for message in thread.history(limit=None):
@@ -306,52 +305,45 @@ async def check_bp(interaction: discord.Interaction):
             continue
 
         member = await interaction.guild.fetch_member(message.author.id)
-        raw_nickname = member.display_name if member else message.author.name  # ✅ ตรวจสอบกรณีหา Member ไม่เจอ
-        nickname_number = extract_number_from_nickname(raw_nickname)  # ✅ ดึงเฉพาะตัวเลข 5 หลัก
-
-        print(f"🔍 ตรวจสอบชื่อ: UserID={message.author.id}, Raw Nickname={raw_nickname}, Extracted={nickname_number}")
+        raw_nickname = member.display_name if member else message.author.name
+        nickname_number = extract_number_from_nickname(raw_nickname)
 
         if message.author.id not in user_bp:
-            user_bp[message.author.id] = (nickname_number, 0)  # ✅ ใช้ตัวเลข 5 หลักที่ดึงมา
+            user_bp[message.author.id] = (nickname_number, 0)
 
         for reaction in message.reactions:
             if str(reaction.emoji) in bp_reactions:
                 async for user in reaction.users():
                     if user.bot:
-                        continue  # ✅ ข้ามบอท
+                        continue
                     user_bp[message.author.id] = (
                         nickname_number,
-                        user_bp[message.author.id][2] + bp_reactions[str(reaction.emoji)]
+                        user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)]
                     )
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1][1], reverse=True)
 
-    # ✅ ตรวจสอบว่ามีข้อมูลให้บันทึกหรือไม่
     if sorted_bp:
-        update_bp_to_sheets(user_bp, thread_name, interaction.guild)  # ✅ ส่งค่าที่มี Nickname แล้ว
+        update_bp_to_sheets(user_bp, thread_name, interaction.guild, transaction_type="deposit")
 
-    # 🔥 สร้าง Embed สำหรับส่งผลลัพธ์ใน Discord
     embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())
-
     description = ""
     for idx, (user_id, (username, bp)) in enumerate(sorted_bp, 1):
         member = interaction.guild.get_member(user_id)
-        mention = member.mention if member else f"<@{user_id}>"  # ✅ ใช้ mention ถ้ามีข้อมูล
-        description += f"{idx}. {mention}\n╰ {bp} BP\n\n"  # ✅ แสดง BP ถูกต้อง
+        mention = member.mention if member else f"<@{user_id}>"
+        description += f"{idx}. {mention}\n╰ {bp} BP\n\n"
 
     embed.description = description.strip()
     embed.set_footer(text=thread.name)
 
-    # ✅ ตรวจสอบว่ามีห้องสรุปคะแนนที่ตั้งค่าไว้หรือไม่
     if interaction.guild_id in bp_summary_room:
         summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
         if summary_channel:
             await summary_channel.send(embed=embed)
-            await interaction.followup.send("✅ สรุปคะแนนถูกโพสต์ในห้องสรุป BP แล้ว!", ephemeral=True)
         else:
-            await interaction.followup.send('⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้ กรุณาตรวจสอบการตั้งค่า', ephemeral=True)
+            await interaction.response.send_message('⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้ กรุณาตรวจสอบการตั้งค่า', ephemeral=True)
     else:
-        await interaction.followup.send('⚠️ ยังไม่มีการตั้งค่าห้องสรุปคะแนน BP', ephemeral=True)
+        await interaction.response.send_message('⚠️ ยังไม่มีการตั้งค่าห้องสรุปคะแนน BP', ephemeral=True)
 
 @bot.tree.command(name="add_bp", description="เพิ่มคะแนน BP ให้สมาชิกในเธรดที่ใช้งานอยู่")
 async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int):
@@ -360,31 +352,12 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
         return
 
     await interaction.response.defer(thinking=True, ephemeral=True)
-
     thread_name = interaction.channel.name
-    member = await interaction.guild.fetch_member(user.id)
-    raw_nickname = member.display_name if member else user.name
-    nickname_number = extract_number_from_nickname(raw_nickname)
-
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # 🔹 สร้าง Timestamp
-
-    print(f"🔍 ตรวจสอบชื่อ: UserID={user.id}, Raw Nickname={raw_nickname}, Extracted={nickname_number}")
-
-    user_bp = {user.id: (nickname_number, bp, timestamp)}  # 🔹 เพิ่ม Timestamp
-
-    update_bp_to_sheets(user_bp, thread_name, interaction.guild)
-
-    embed = discord.Embed(title="💎 บวกคะแนน BP", description=f"<@{user.id}> : {bp} BP", color=discord.Color.blue())
-    embed.set_footer(text=thread_name)
-
-    if interaction.guild_id in bp_summary_room:
-        summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
-        if summary_channel:
-            await summary_channel.send(embed=embed)
-        else:
-            await interaction.response.send_message('ไม่พบห้องที่ตั้งค่าไว้', ephemeral=True)
-    else:
-        await interaction.response.send_message('ยังไม่มีการตั้งค่าห้องสรุปคะแนน', ephemeral=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    nickname_number = extract_number_from_nickname(user.display_name if user else user.name)
+    user_bp = {user.id: (nickname_number, bp, timestamp)}
+    update_bp_to_sheets(user_bp, thread_name, interaction.guild, transaction_type="deposit")
+    await interaction.response.send_message(f"✅ เพิ่ม {bp} BP ให้ {user.mention} แล้ว", ephemeral=True)
 
 @bot.tree.command(name="withdraw_bp", description="หักคะแนน BP ของสมาชิก")
 async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp: int):
@@ -393,31 +366,12 @@ async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp
         return
 
     await interaction.response.defer(thinking=True, ephemeral=True)
-
     thread_name = interaction.channel.name
-    member = await interaction.guild.fetch_member(user.id)
-    raw_nickname = member.display_name if member else user.name
-    nickname_number = extract_number_from_nickname(raw_nickname)
-
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # 🔹 เพิ่ม Timestamp
-
-    print(f"🔍 ตรวจสอบชื่อ: UserID={user.id}, Raw Nickname={raw_nickname}, Extracted={nickname_number}")
-
-    user_bp = {user.id: (nickname_number, -bp, timestamp)}  # 🔹 เพิ่ม Timestamp
-
-    update_bp_to_sheets(user_bp, thread_name, interaction.guild)
-
-    embed = discord.Embed(title="🔻 หักคะแนน BP", description=f"<@{user.id}> : -{bp} BP", color=discord.Color.red())
-    embed.set_footer(text=thread_name)
-
-    if interaction.guild_id in bp_summary_room:
-        summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
-        if summary_channel:
-            await summary_channel.send(embed=embed)
-        else:
-            await interaction.response.send_message('ไม่พบห้องที่ตั้งค่าไว้', ephemeral=True)
-    else:
-        await interaction.response.send_message('ยังไม่มีการตั้งค่าห้องสรุปคะแนน', ephemeral=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    nickname_number = extract_number_from_nickname(user.display_name if user else user.name)
+    user_bp = {user.id: (nickname_number, bp, timestamp)}
+    update_bp_to_sheets(user_bp, thread_name, interaction.guild, transaction_type="withdraw")
+    await interaction.response.send_message(f"✅ หัก {bp} BP จาก {user.mention} แล้ว", ephemeral=True)
 # //////////////////////////// Giveaway ////////////////////////////
 # ✅ ตั้งค่าห้องสุ่มรางวัล
 @bot.tree.command(name="setgiveaway", description="ตั้งค่าห้องสำหรับจัดกิจกรรมสุ่มรางวัล")
