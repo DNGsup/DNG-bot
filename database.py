@@ -76,14 +76,14 @@ def update_bp_to_sheets(data, thread_name, guild, transaction_type="deposit"):
             existing_withdraw = sheet.cell(last_row, 5).value  # BP Withdraw
 
             if transaction_type == "deposit" and not existing_withdraw:
-                sheet.update(f"D{last_row}:G{last_row}", [[bp, "", thread_name, timestamp]])
+                sheet.update(f"D{last_row}:G{last_row}", [[bp, "", thread_name, timestamp]], value_input_option="RAW")
                 continue
             elif transaction_type == "withdraw" and not existing_deposit:
-                sheet.update(f"E{last_row}:G{last_row}", [[bp, thread_name, timestamp]])
+                sheet.update(f"E{last_row}:G{last_row}", [[bp, thread_name, timestamp]], value_input_option="RAW")
                 continue
 
         # ถ้ามีข้อมูลอยู่แล้ว ให้ลงแถวใหม่
-        rows.append([str(user_id), f"'{display_name}", None, bp if transaction_type == "deposit" else "",
+        rows.append([str(user_id), f"'{display_name}", "", bp if transaction_type == "deposit" else "",
                      bp if transaction_type == "withdraw" else "", thread_name, timestamp])
 
     if rows:

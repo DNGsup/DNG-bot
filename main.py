@@ -321,7 +321,7 @@ async def check_bp(interaction: discord.Interaction):
                         continue  # ✅ ข้ามบอท
                     user_bp[message.author.id] = (
                         nickname_number,
-                        user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)]
+                        user_bp[message.author.id][2] + bp_reactions[str(reaction.emoji)]
                     )
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1][1], reverse=True)
