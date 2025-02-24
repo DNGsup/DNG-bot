@@ -20,8 +20,6 @@ from scheduler import schedule_boss_notifications
 from database import bp_data, bp_reactions, bp_summary_room,giveaways ,giveaway_room ,winner_history
 
 intents = discord.Intents.default()
-intents.guilds = True  # ✅ เปิดการเข้าถึงข้อมูลเซิร์ฟเวอร์
-intents.members = True  # ✅ เปิดการเข้าถึงข้อมูลสมาชิก
 intents.messages = True  # ✅ เปิดการอ่านข้อความ
 intents.message_content = True  # ✅ เปิดการเข้าถึงเนื้อหาข้อความ
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -290,7 +288,7 @@ async def setting_bproom(interaction: discord.Interaction, room: discord.TextCha
     await interaction.response.send_message(f'ตั้งค่าห้องสรุปคะแนนเป็น {room.mention}', ephemeral=True)
 
 
-@bot.tree.command()
+@bot.tree.command(name="check_bp", description="คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง")
 async def check_bp(interaction: discord.Interaction):
     """ คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง """
     if not isinstance(interaction.channel, discord.Thread):
@@ -307,8 +305,8 @@ async def check_bp(interaction: discord.Interaction):
         if message.author.bot:
             continue
 
-        member = await interaction.guild.fetch_member(message.author.id)  # ✅ ใช้ fetch_member() ดึงข้อมูลสดๆ
-        raw_nickname = member.display_name if member else message.author.name  # ✅ ดึงชื่อเล่นจากเซิร์ฟเวอร์
+        member = await interaction.guild.fetch_member(message.author.id)
+        raw_nickname = member.display_name if member else message.author.name  # ✅ ตรวจสอบกรณีหา Member ไม่เจอ
         nickname_number = extract_number_from_nickname(raw_nickname)  # ✅ ดึงเฉพาะตัวเลข 5 หลัก
 
         print(f"🔍 ตรวจสอบชื่อ: UserID={message.author.id}, Raw Nickname={raw_nickname}, Extracted={nickname_number}")
@@ -327,20 +325,57 @@ async def check_bp(interaction: discord.Interaction):
                     )
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1][1], reverse=True)
-    update_bp_to_sheets(user_bp, thread_name, interaction.guild)  # ✅ ส่งค่าที่มี Nickname แล้ว
-    embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())    # 🔥 สร้าง Embed สำหรับส่งผลลัพธ์ใน Discord
+
+    # ✅ ตรวจสอบว่ามีข้อมูลให้บันทึกหรือไม่
+    if sorted_bp:
+        update_bp_to_sheets(user_bp, thread_name, interaction.guild)  # ✅ ส่งค่าที่มี Nickname แล้ว
+
+    # 🔥 สร้าง Embed สำหรับส่งผลลัพธ์ใน Discord
+    embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())
 
     description = ""
     for idx, (user_id, (username, bp)) in enumerate(sorted_bp, 1):
-        member = interaction.guild.get_member(user_id)  # ✅ ดึงข้อมูลสมาชิกจากเซิร์ฟเวอร์
+        member = interaction.guild.get_member(user_id)
         mention = member.mention if member else f"<@{user_id}>"  # ✅ ใช้ mention ถ้ามีข้อมูล
-        description += f"{mention}\n╰ {bp} BP\n\n"  # ✅ แสดง BP ถูกต้อง
+        description += f"{idx}. {mention}\n╰ {bp} BP\n\n"  # ✅ แสดง BP ถูกต้อง
 
-    embed.description = description.strip()  # ลบช่องว่างท้ายข้อความ
+    embed.description = description.strip()
     embed.set_footer(text=thread.name)
 
-    embed.description = description
-    embed.set_footer(text=thread.name)
+    # ✅ ตรวจสอบว่ามีห้องสรุปคะแนนที่ตั้งค่าไว้หรือไม่
+    if interaction.guild_id in bp_summary_room:
+        summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
+        if summary_channel:
+            await summary_channel.send(embed=embed)
+            await interaction.followup.send("✅ สรุปคะแนนถูกโพสต์ในห้องสรุป BP แล้ว!", ephemeral=True)
+        else:
+            await interaction.followup.send('⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้ กรุณาตรวจสอบการตั้งค่า', ephemeral=True)
+    else:
+        await interaction.followup.send('⚠️ ยังไม่มีการตั้งค่าห้องสรุปคะแนน BP', ephemeral=True)
+
+@bot.tree.command(name="add_bp", description="เพิ่มคะแนน BP ให้สมาชิกในเธรดที่ใช้งานอยู่")
+async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int):
+    if not isinstance(interaction.channel, discord.Thread):
+        await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
+        return
+
+    await interaction.response.defer(thinking=True, ephemeral=True)
+
+    thread_name = interaction.channel.name
+    member = await interaction.guild.fetch_member(user.id)
+    raw_nickname = member.display_name if member else user.name
+    nickname_number = extract_number_from_nickname(raw_nickname)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # 🔹 สร้าง Timestamp
+
+    print(f"🔍 ตรวจสอบชื่อ: UserID={user.id}, Raw Nickname={raw_nickname}, Extracted={nickname_number}")
+
+    user_bp = {user.id: (nickname_number, bp, timestamp)}  # 🔹 เพิ่ม Timestamp
+
+    update_bp_to_sheets(user_bp, thread_name, interaction.guild)
+
+    embed = discord.Embed(title="💎 บวกคะแนน BP", description=f"<@{user.id}> : {bp} BP", color=discord.Color.blue())
+    embed.set_footer(text=thread_name)
 
     if interaction.guild_id in bp_summary_room:
         summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
@@ -351,32 +386,29 @@ async def check_bp(interaction: discord.Interaction):
     else:
         await interaction.response.send_message('ยังไม่มีการตั้งค่าห้องสรุปคะแนน', ephemeral=True)
 
-@bot.tree.command(name="add_bp", description="เพิ่มคะแนน BP ให้สมาชิกในเธรดที่ใช้งานอยู่")
-async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int):
+@bot.tree.command(name="withdraw_bp", description="หักคะแนน BP ของสมาชิก")
+async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp: int):
     if not isinstance(interaction.channel, discord.Thread):
         await interaction.response.send_message("คำสั่งนี้ต้องใช้ในเธรดเท่านั้น!", ephemeral=True)
         return
 
     await interaction.response.defer(thinking=True, ephemeral=True)
 
-    thread = interaction.channel
-    thread_name = thread.name  # ✅ ดึงชื่อเธรด
-    member = await interaction.guild.fetch_member(user.id)  # ✅ ดึงข้อมูลสมาชิกสดๆ
-    raw_nickname = member.display_name if member else user.name  # ✅ ดึงชื่อเล่นจากเซิร์ฟเวอร์
-    nickname_number = extract_number_from_nickname(raw_nickname)  # ✅ ดึงเฉพาะตัวเลข 5 หลัก
+    thread_name = interaction.channel.name
+    member = await interaction.guild.fetch_member(user.id)
+    raw_nickname = member.display_name if member else user.name
+    nickname_number = extract_number_from_nickname(raw_nickname)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # 🔹 เพิ่ม Timestamp
 
     print(f"🔍 ตรวจสอบชื่อ: UserID={user.id}, Raw Nickname={raw_nickname}, Extracted={nickname_number}")
 
-    # ✅ เพิ่มคะแนนให้กับ BP ของผู้ใช้
-    bp_data[user.id] = bp_data.get(user.id, 0) + bp
+    user_bp = {user.id: (nickname_number, -bp, timestamp)}  # 🔹 เพิ่ม Timestamp
 
-    # ✅ เตรียมข้อมูลเพื่อบันทึกลง Google Sheets โดยไม่เขียนทับสูตรในคอลัมน์ C
-    user_bp = {user.id: (nickname_number, bp_data[user.id])}
+    update_bp_to_sheets(user_bp, thread_name, interaction.guild)
 
-    update_bp_to_sheets(user_bp, thread_name, interaction.guild)  # ✅ บันทึกข้อมูลลง Google Sheets
-
-    embed = discord.Embed(title="💎 บวกคะแนน BP", description=f"<@!{user.id}> : {bp} BP", color=discord.Color.blue())
-    embed.set_footer(text=thread.name)
+    embed = discord.Embed(title="🔻 หักคะแนน BP", description=f"<@{user.id}> : -{bp} BP", color=discord.Color.red())
+    embed.set_footer(text=thread_name)
 
     if interaction.guild_id in bp_summary_room:
         summary_channel = bot.get_channel(bp_summary_room[interaction.guild_id])
@@ -539,165 +571,6 @@ def parse_duration(duration: str):
         return int(duration[:-1]) * units[duration[-1]]
     except:
         return None
-# ------------------- SettingView -------------------
-class SettingView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=600)  # ✅ ปุ่มจะหมดอายุใน 10 นาที
-
-    @discord.ui.button(label="📌 เพิ่มห้องสำหรับบอร์ดแคส", style=discord.ButtonStyle.primary)
-    async def add_broadcast_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)
-        command = bot.tree.get_command("broadcast_setting")
-        if command:
-            await command.callback(interaction, action="ADD", channel=interaction.channel)
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /broadcast_setting", ephemeral=True)
-
-    @discord.ui.button(label="📌 ลบห้องสำหรับบอร์ดแคส", style=discord.ButtonStyle.danger)
-    async def remove_broadcast_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)
-        command = bot.tree.get_command("broadcast_setting")
-        if command:
-            await command.callback(interaction, action="REMOVE", channel=interaction.channel)
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /broadcast_setting", ephemeral=True)
-
-    @discord.ui.button(label="📌 ตั้งค่าโรลสำหรับแจ้งเตือน", style=discord.ButtonStyle.secondary)
-    async def set_notification_role(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)
-        command = bot.tree.get_command("noti_role")
-        if command:
-            await command.callback(interaction, role=None)
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /noti_role", ephemeral=True)
-
-    @discord.ui.button(label="📌 ตั้งค่าห้องสำหรับแจ้งเตือน", style=discord.ButtonStyle.secondary)
-    async def set_notification_room(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)
-        command = bot.tree.get_command("noti_room")
-        if command:
-            await command.callback(interaction, channel=interaction.channel)
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /noti_room", ephemeral=True)
-
-    @discord.ui.button(label="📌 ตั้งค่าห้องสำหรับสรุปคะแนน", style=discord.ButtonStyle.secondary)
-    async def set_summary_room(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)
-        command = bot.tree.get_command("setting_bproom")
-        if command:
-            await command.callback(interaction, room=interaction.channel)
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /setting_bproom", ephemeral=True)
-
-    @discord.ui.button(label="📌 ตั้งค่าคะแนน BP ตามอีโมจิ", style=discord.ButtonStyle.secondary)
-    async def set_bp(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)
-        command = bot.tree.get_command("set_bp")
-        if command:
-            await command.callback(interaction, emoji="🔥", points=10)
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /set_bp", ephemeral=True)
-
-    @discord.ui.button(label="📌 ตั้งค่าห้องจัดกิจกรรม", style=discord.ButtonStyle.secondary)
-    async def set_giveaway_room(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer(ephemeral=True)
-        command = bot.tree.get_command("setgiveaway")
-        if command:
-            await command.callback(interaction, channel=interaction.channel)
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /setgiveaway", ephemeral=True)
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True  # ปิดการใช้งานปุ่มทั้งหมด
-        self.stop()  # หยุด View
-# ------------------- ToolsView -------------------
-class ToolsView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="📌 บอร์ดแคส", style=discord.ButtonStyle.primary)
-    async def broadcast(self, interaction: discord.Interaction, button: discord.ui.Button):
-        command = bot.tree.get_command("broadcast")
-        if command:
-            await command.callback(
-                interaction, mode="STANDARD", boss_name="BOSS", date="01/01", hour=12, minute=0, owner="OWNER"
-            )
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /broadcast", ephemeral=True)
-
-    @discord.ui.button(label="📌 แจ้งเตือน", style=discord.ButtonStyle.primary)
-    async def notification(self, interaction: discord.Interaction, button: discord.ui.Button):
-        command = bot.tree.get_command("notification")
-        if command:
-            await command.callback(interaction, boss_name="BOSS", hours=1, minutes=0, owner="OWNER")
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /notification", ephemeral=True)
-
-    @discord.ui.button(label="📌 รายการแจ้งเตือน", style=discord.ButtonStyle.secondary)
-    async def notification_list(self, interaction: discord.Interaction, button: discord.ui.Button):
-        command = bot.tree.get_command("notification_list")
-        if command:
-            await command.callback(interaction)
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /notification_list", ephemeral=True)
-
-    @discord.ui.button(label="📌 จัดกิจกรรมสุ่ม", style=discord.ButtonStyle.primary)
-    async def gcreate(self, interaction: discord.Interaction, button: discord.ui.Button):
-        command = bot.tree.get_command("gcreate")
-        if command:
-            await command.callback(interaction, role=None)
-        else:
-            await interaction.followup.send("❌ ไม่พบคำสั่ง /gcreate", ephemeral=True)
-# ------------------- MyBot -------------------
-# ------------------- setting -------------------
-@bot.tree.command(name="settings", description="ตั้งค่าระบบบอท")
-async def settings(interaction: discord.Interaction):
-    view = SettingView()
-    await interaction.response.send_message("🔧 ตั้งค่าระบบบอทที่นี่:", view=view, ephemeral=True)
-# ------------------- tools -------------------
-@bot.tree.command(name="tools", description="เครื่องมือสำหรับใช้งาน")
-async def tools_command(interaction: discord.Interaction):
-    embed = discord.Embed(title="🛠️ เครื่องมือ", description="เลือกเครื่องมือจากปุ่มด้านล่าง:", color=discord.Color.green())
-    await interaction.response.send_message(embed=embed, view=ToolsView(), ephemeral=True)
-# ------------------- view_settings -------------------
-@bot.tree.command(name="view_settings", description="ดูการตั้งค่าทั้งหมดของเซิร์ฟเวอร์")
-async def view_settings(interaction: discord.Interaction):
-    guild_id = str(interaction.guild_id)
-
-    broadcast_rooms = broadcast_channels.get(guild_id, set())
-    noti_room = notification_room.get(guild_id)
-    noti_role = notification_role.get(guild_id)
-    bp_room = bp_summary_room.get(guild_id)
-    giveaway = giveaway_room.get(guild_id)
-    bp_emojis = bp_reactions or {}
-
-    embed = discord.Embed(title="📋 การตั้งค่าทั้งหมด", color=discord.Color.orange())
-
-    embed.add_field(name="📢 ห้องสำหรับบอร์ดแคส",
-                    value=", ".join(f"<#{ch}>" for ch in broadcast_rooms) if broadcast_rooms else "ไม่มีการตั้งค่า",
-                    inline=False)
-
-    embed.add_field(name="🔔 ห้องสำหรับแจ้งเตือน",
-                    value=f"<#{noti_room}>" if noti_room else "ไม่มีการตั้งค่า",
-                    inline=False)
-
-    embed.add_field(name="🏷️ โรลสำหรับแจ้งเตือน",
-                    value=f"<@&{noti_role}>" if noti_role else "ไม่มีการตั้งค่า",
-                    inline=False)
-
-    embed.add_field(name="📝 ห้องสำหรับสรุปคะแนน BP",
-                    value=f"<#{bp_room}>" if bp_room else "ไม่มีการตั้งค่า",
-                    inline=False)
-
-    embed.add_field(name="🎁 ห้องสำหรับจัดกิจกรรม",
-                    value=f"<#{giveaway}>" if giveaway else "ไม่มีการตั้งค่า",
-                    inline=False)
-
-    emoji_list = "\n".join(f"{emoji} : {points} BP" for emoji, points in bp_emojis.items()) or "ไม่มีการตั้งค่า"
-    embed.add_field(name="💠 การตั้งค่าคะแนน BP ตามอีโมจิ", value=emoji_list, inline=False)
-
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-# /////////////////////////////////////////////////////////////////////
+# ------------------------------------------------------------------------------------------
 server_on()
 bot.run(os.getenv('TOKEN'))
