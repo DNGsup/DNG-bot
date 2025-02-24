@@ -287,15 +287,6 @@ async def setting_bproom(interaction: discord.Interaction, room: discord.TextCha
     bp_summary_room[interaction.guild_id] = room.id
     await interaction.response.send_message(f'ตั้งค่าห้องสรุปคะแนนเป็น {room.mention}', ephemeral=True)
 
-# ✅ แก้ไขไฟล์ main.py (ฟังก์ชัน check_bp และ add_bp)
-import discord
-from discord.ext import commands
-from discord import app_commands
-from datetime import datetime
-from database import extract_number_from_nickname, update_bp_to_sheets, bp_summary_room
-
-bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
-
 # ✅ ฟังก์ชันคำนวณคะแนน BP
 @bot.tree.command(name="check_bp", description="คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง")
 async def check_bp(interaction: discord.Interaction):
