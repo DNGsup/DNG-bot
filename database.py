@@ -87,7 +87,7 @@ def update_bp_to_sheets(data, thread_name, guild, transaction_type="deposit"):
                      bp if transaction_type == "withdraw" else "", thread_name, timestamp])
 
     if rows:
-        cell_range = f"A{start_row}:G{start_row + len(rows) - 1}"
+        cell_range = f"A{start_row}:H{start_row + len(rows) - 1}"
         sheet.update(cell_range, rows, value_input_option="RAW")  # ✅ เขียนลงแถวว่าง
 # ------------------ Broadcast management ------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
