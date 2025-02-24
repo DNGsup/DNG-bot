@@ -316,9 +316,11 @@ async def check_bp(interaction: discord.Interaction):
                 async for user in reaction.users():
                     if user.bot:
                         continue
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # ✅ เพิ่ม Timestamp
                     user_bp[message.author.id] = (
                         nickname_number,
-                        user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)]
+                        user_bp[message.author.id][1] + bp_reactions[str(reaction.emoji)],
+                        timestamp  # ✅ เพิ่มค่า timestamp ลงไป
                     )
 
     sorted_bp = sorted(user_bp.items(), key=lambda x: x[1][1], reverse=True)
