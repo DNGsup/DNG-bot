@@ -44,20 +44,35 @@ def find_empty_row(sheet):
     col_values = sheet.col_values(1)  # ดึงค่าทั้งคอลัมน์ A
     return len(col_values) + 1  # หาตำแหน่งแถวว่างแถวถัดไป
 # ------------------ update_bp_to_sheets ------------------
+# ------------------ update_bp_to_sheets ------------------
 def update_bp_to_sheets(data, thread_name, guild, transaction_type="deposit"):
+    """
+    อัปเดตคะแนน BP ไปยัง Google Sheets
+    - No. ดึงจากเลข 5 หลักในชื่อเล่น
+    - ข้ามการบันทึก Name และ GR (ปล่อยให้สูตรในชีททำงานเอง)
+    - บันทึกการฝาก/ถอน ตาม transaction_type
+    """
     if sheet.cell(1, 1).value is None:
         sheet.update("A1", [["Timestamp", "User ID", "No.", "Name", "GR", "BP Deposit", "Thread name", "BP Withdraw"]])
 
     start_row = find_empty_row(sheet)
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     rows = []
+
     for user_id, (nickname, bp, timestamp) in data.items():
         member = guild.get_member(int(user_id))
-        display_name = extract_number_from_nickname(member.display_name) if member else nickname
+        no_value = extract_number_from_nickname(member.display_name if member else nickname)
 
-        rows.append([timestamp, str(user_id), start_row, "สูตร", "สูตร", bp if transaction_type == "deposit" else "",
-                     thread_name if transaction_type == "deposit" else "",
-                     bp if transaction_type == "withdraw" else ""])
+        row = [
+            timestamp,             # Timestamp
+            str(user_id),          # User ID
+            no_value,              # No. (เลข 5 หลัก)
+            None,                  # Name (ข้ามเพื่อไม่ทับสูตร)
+            None,                  # GR (ข้ามเพื่อไม่ทับสูตร)
+            bp if transaction_type == "deposit" else "",  # BP Deposit
+            thread_name if transaction_type == "deposit" else "",  # Thread name
+            bp if transaction_type == "withdraw" else ""  # BP Withdraw
+        ]
+        rows.append(row)
 
     cell_range = f"A{start_row}:H{start_row + len(rows) - 1}"
     sheet.update(cell_range, rows, value_input_option="RAW")
