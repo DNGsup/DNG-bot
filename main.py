@@ -289,10 +289,10 @@ async def setting_bproom(interaction: discord.Interaction, room: discord.TextCha
 
 # ✅ ฟังก์ชันส่ง embed สรุปคะแนนไปยังห้องสรุป BP
 def send_summary_embed(guild_id: int, embed: discord.Embed):
-    summary_channel_id = bp_summary_room.get(guild_id)
-    if not summary_channel_id:
+    summary_channel = bp_summary_room.get(guild_id)
+    if not summary_channel:
         return None
-    return bot.get_channel(summary_channel_id)
+    return bot.get_channel(summary_channel)
 
 # ✅ ฟังก์ชันคำนวณคะแนน BP
 @bot.tree.command(name="check_bp", description="คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง")
