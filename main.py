@@ -288,14 +288,11 @@ async def setting_bproom(interaction: discord.Interaction, room: discord.TextCha
     await interaction.response.send_message(f'ตั้งค่าห้องสรุปคะแนนเป็น {room.mention}', ephemeral=True)
 
 # ✅ ฟังก์ชันส่ง embed สรุปคะแนนไปยังห้องสรุป BP
-def send_summary_embed(guild_id: int, embed: discord.Embed):
-    summary_channel_id = bp_summary_room.get(guild_id)  # ✅ บรรทัดนี้เปลี่ยนตัวแปรให้ถูกต้อง
-    if not summary_channel_id:  # ✅ เช็คค่า id ให้ถูกต้อง
-        return False
-
-    summary_channel = bot.get_channel(summary_channel_id)  # ✅ ใช้ id ที่ถูกต้องในการดึง channel
-    return summary_channel if summary_channel else False
-
+def send_summary_embed(guild_id: int):
+    summary_channel = bp_summary_room.get(guild_id)
+    if not summary_channel:
+        return None  # 🔄 คืน None หากไม่มีค่า
+    return bot.get_channel(summary_channel)  # ✅ คืนค่า channel ตรง ๆ
 # ✅ ฟังก์ชันคำนวณคะแนน BP
 @bot.tree.command(name="check_bp", description="คำนวณคะแนน BP ในเธรดที่พิมพ์คำสั่ง")
 async def check_bp(interaction: discord.Interaction):
@@ -339,24 +336,19 @@ async def check_bp(interaction: discord.Interaction):
 
     embed = discord.Embed(title="🏆 สรุปคะแนน BP", color=discord.Color.gold())
     description = ""
-    for idx, (user_id, (username, bp)) in enumerate(sorted_bp, 1):
+    for idx, (user_id, (username, bp, _)) in enumerate(sorted_bp, 1):
         member = interaction.guild.get_member(user_id)  # ✅ ดึงข้อมูลสมาชิกจากเซิร์ฟเวอร์
         mention = member.mention if member else f"<@{user_id}>"  # ✅ ใช้ mention ถ้ามีข้อมูล
         description += f"{mention}\n╰ {bp} BP\n\n"  # ✅ แสดง BP ถูกต้อง
-
     embed.description = description.strip()
     embed.set_footer(text=thread.name)
 
-    summary_channel = send_summary_embed(interaction.guild_id, embed)
+    summary_channel = send_summary_embed(interaction.guild_id)  # ✅ เรียกฟังก์ชันโดยไม่ต้องส่ง embed
     if summary_channel:
-        summary_channel = bot.get_channel(summary_channel)
-        if summary_channel:
-            await summary_channel.send(embed=embed)
-            await interaction.followup.send("✅ ส่งสรุปคะแนนไปยังห้องสรุปเรียบร้อยแล้ว!", ephemeral=True)
-        else:
-            await interaction.followup.send("⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้!", ephemeral=True)
+        await summary_channel.send(embed=embed)  # ✅ ใช้ได้เลย
+        await interaction.followup.send("✅ ส่งสรุปคะแนนไปยังห้องสรุปเรียบร้อยแล้ว!", ephemeral=True)
     else:
-        await interaction.followup.send("⚠️ ยังไม่มีการตั้งค่าห้องสรุปคะแนน BP", ephemeral=True)
+        await interaction.followup.send("⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้!", ephemeral=True)
 
 # ✅ ฟังก์ชันเพิ่มคะแนน BP
 @bot.tree.command(name="add_bp", description="เพิ่มคะแนน BP ให้สมาชิกในเธรดที่ใช้งานอยู่")
@@ -369,19 +361,19 @@ async def add_bp(interaction: discord.Interaction, user: discord.Member, bp: int
     thread_name = interaction.channel.name
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     nickname_number = extract_number_from_nickname(user.display_name)
-
     user_bp = {user.id: (nickname_number, bp, timestamp)}
     update_bp_to_sheets(user_bp, thread_name, interaction.guild, transaction_type="deposit")
 
     embed = discord.Embed(title="💎 บวกคะแนน BP", description=f"{user.mention} ได้รับ +{bp} BP", color=discord.Color.blue())
     embed.set_footer(text=thread_name)
 
-    summary_channel = send_summary_embed(interaction.guild_id, embed)  # ✅ เพิ่มบรรทัดนี้
+    summary_channel = send_summary_embed(interaction.guild_id)
     if summary_channel:
-        await summary_channel.send(embed=embed)  # ✅ ส่ง embed ไปยังห้องที่ตั้งค่าไว้
+        await summary_channel.send(embed=embed)
         await interaction.followup.send("✅ บวกคะแนนและส่งสรุปเรียบร้อยแล้ว!", ephemeral=True)
     else:
         await interaction.followup.send("⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้!", ephemeral=True)
+
 # ✅ ฟังก์ชันหักคะแนน Bp
 @bot.tree.command(name="withdraw_bp", description="หักคะแนน BP ของสมาชิก")
 async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp: int):
@@ -395,7 +387,16 @@ async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp
     nickname_number = extract_number_from_nickname(user.display_name if user else user.name)
     user_bp = {user.id: (nickname_number, bp, timestamp)}
     update_bp_to_sheets(user_bp, thread_name, interaction.guild, transaction_type="withdraw")
-    await interaction.response.send_message(f"✅ หัก {bp} BP จาก {user.mention} แล้ว", ephemeral=True)
+    embed = discord.Embed(title="❌ แจ้งถอน BP", description=f"{user.mention} ถอน {bp} BP",
+                          color=discord.Color.red())
+    embed.timestamp = datetime.now()
+
+    summary_channel = send_summary_embed(interaction.guild_id)
+    if summary_channel:
+        await summary_channel.send(embed=embed)
+        await interaction.followup.send(f"✅ หัก {bp} BP จาก {user.mention} แล้ว", ephemeral=True)
+    else:
+        await interaction.followup.send("⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้!", ephemeral=True)
 # //////////////////////////// Giveaway ////////////////////////////
 # ✅ ตั้งค่าห้องสุ่มรางวัล
 @bot.tree.command(name="setgiveaway", description="ตั้งค่าห้องสำหรับจัดกิจกรรมสุ่มรางวัล")
