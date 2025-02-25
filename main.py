@@ -37,7 +37,7 @@ async def on_ready():
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง ค่าคือ (86400)"""
-    await asyncio.sleep(60)
+    await asyncio.sleep(86400)
     try:
         await thread.edit(locked=True)
     except discord.NotFound:
