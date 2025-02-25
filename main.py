@@ -36,22 +36,24 @@ async def on_ready():
 # //////////////////////////// ดูค่าตั้งค่าของบอท ////////////////////////////
 @bot.tree.command(name="config_list", description="ดูค่าตั้งค่าของบอท")
 async def config_list(interaction: discord.Interaction):
-    from database import (
-        broadcast_channels, notification_room, notification_role,
-        bp_summary_room, bp_reactions, giveaway_room, boss_notifications
-    )
+    await asyncio.sleep(5)  # ✅ รอให้ค่าถูกโหลดก่อน
+
     guild_id = str(interaction.guild_id)
+    # ✅ Debug ตรวจสอบค่าก่อนส่ง Embed
+    print(f"[DEBUG] notification_room: {notification_room}")
+    print(f"[DEBUG] notification_role: {notification_role}")
+    print(f"[DEBUG] bp_summary_room: {bp_summary_room}")
+
     embed = discord.Embed(title="📜 รายการตั้งค่าของบอท", color=discord.Color.blue())
-    # Broadcast Channels
-    broadcast_rooms = broadcast_channels.get(guild_id, [])
+    broadcast_rooms = broadcast_channels.get(guild_id, []) # Broadcast Channels
     embed.add_field(
         name="📢 Broadcast Rooms",
         value=", ".join(f"<#{room}>" for room in broadcast_rooms) if broadcast_rooms else "ไม่มี",
         inline=False
     )
-    # Notification Settings
-    noti_room = notification_room.get(guild_id)
-    noti_role = notification_role.get(guild_id)
+    
+    noti_room = notification_room.get(guild_id) # Notification Settings
+    noti_role = notification_role.get(guild_id) # Notification Settings
     embed.add_field(
         name="🔔 Notification Room",
         value=f"<#{noti_room}>" if noti_room else "ยังไม่ได้ตั้งค่า",
@@ -62,8 +64,8 @@ async def config_list(interaction: discord.Interaction):
         value=f"<@&{noti_role}>" if noti_role else "ยังไม่ได้ตั้งค่า",
         inline=False
     )
-    # BP Settings
-    bp_room = bp_summary_room.get(guild_id)
+    
+    bp_room = bp_summary_room.get(guild_id) # BP Settings
     bp_react = ", ".join(
         [f"{emoji} = {points} BP" for emoji, points in bp_reactions.items()]) if bp_reactions else "ยังไม่ได้ตั้งค่า"
     embed.add_field(
@@ -76,15 +78,15 @@ async def config_list(interaction: discord.Interaction):
         value=bp_react,
         inline=False
     )
-    # Giveaway Room
-    g_room = giveaway_room.get(guild_id)
+    
+    g_room = giveaway_room.get(guild_id) # Giveaway Room
     embed.add_field(
         name="🎁 Giveaway Room",
         value=f"<#{g_room}>" if g_room else "ยังไม่ได้ตั้งค่า",
         inline=False
     )
-    # Boss Notifications
-    boss_noti = boss_notifications.get(guild_id, [])
+
+    boss_noti = boss_notifications.get(guild_id, [])  # Boss Notifications
     if boss_noti:
         boss_list = "\n".join(
             [f"⚔ {notif['boss_name']} - {notif['spawn_time'].strftime('%d/%m/%y %H:%M')}" for notif in boss_noti])
