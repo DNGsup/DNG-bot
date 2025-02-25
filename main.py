@@ -37,7 +37,7 @@ async def on_ready():
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง ค่าคือ (86400)"""
-    await asyncio.sleep(86400)
+    await asyncio.sleep(60)
     try:
         await thread.edit(locked=True)
     except discord.NotFound:
@@ -197,7 +197,7 @@ async def notification(
     # ถ้าไม่มี role เลย ให้แท็ก @everyone แทน
     role_mention = f"<@&{role_id}>" if role else "@everyone"
 
-    now = datetime.datetime.now(local_tz)  # ✅ ใช้ timezone ที่กำหนด
+    now = datetime.now(local_tz)  # ✅ ใช้ timezone ที่กำหนด
     spawn_time = now + datetime.timedelta(hours=hours, minutes=minutes)
 
     if guild_id not in boss_notifications:
@@ -222,7 +222,7 @@ async def notification_list(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)  # ลดดีเลย์จากการ defer
 
     guild_id = interaction.guild_id
-    now = datetime.datetime.now(local_tz)
+    now = datetime.now(local_tz)
 
     # ✅ แทนที่การลบจริงด้วยการสร้างตัวแปรใหม่เพื่อแสดงผล
     active_notifications = [
