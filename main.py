@@ -36,7 +36,7 @@ async def on_ready():
 # //////////////////////////// ดูค่าตั้งค่าของบอท ////////////////////////////
 @bot.tree.command(name="config_list", description="ดูค่าตั้งค่าของบอท")
 async def config_list(interaction: discord.Interaction):
-    await asyncio.sleep(5)  # ✅ รอให้ค่าถูกโหลดก่อน
+    await interaction.response.defer(thinking=True)  # ✅ แจ้ง Discord ว่าบอทต้องใช้เวลา
 
     guild_id = str(interaction.guild_id)
     # ✅ Debug ตรวจสอบค่าก่อนส่ง Embed
@@ -51,7 +51,7 @@ async def config_list(interaction: discord.Interaction):
         value=", ".join(f"<#{room}>" for room in broadcast_rooms) if broadcast_rooms else "ไม่มี",
         inline=False
     )
-    
+
     noti_room = notification_room.get(guild_id) # Notification Settings
     noti_role = notification_role.get(guild_id) # Notification Settings
     embed.add_field(
@@ -64,7 +64,7 @@ async def config_list(interaction: discord.Interaction):
         value=f"<@&{noti_role}>" if noti_role else "ยังไม่ได้ตั้งค่า",
         inline=False
     )
-    
+
     bp_room = bp_summary_room.get(guild_id) # BP Settings
     bp_react = ", ".join(
         [f"{emoji} = {points} BP" for emoji, points in bp_reactions.items()]) if bp_reactions else "ยังไม่ได้ตั้งค่า"
@@ -78,7 +78,7 @@ async def config_list(interaction: discord.Interaction):
         value=bp_react,
         inline=False
     )
-    
+
     g_room = giveaway_room.get(guild_id) # Giveaway Room
     embed.add_field(
         name="🎁 Giveaway Room",
