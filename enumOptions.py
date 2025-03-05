@@ -32,3 +32,7 @@ class BroadcastSettingAction(Enum):
 class BroadcastMode(Enum):
     STANDARD = "standard"
     MULTI = "multi"
+
+class PointType(Enum):
+    BP = "BP"
+    WP = "WP"
