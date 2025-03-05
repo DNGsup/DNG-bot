@@ -25,6 +25,7 @@ def extract_number_from_nickname(nickname):
     """ดึงเฉพาะตัวเลข 5 หลักแรกจาก Nickname"""
     match = re.search(r'\d{5}', nickname)  # ✅ ค้นหาเลข 5 หลักแรกที่พบ
     return match.group(0) if match else nickname  # ✅ ถ้ามีเลข 5 หลัก ให้ใช้เลขนั้น ถ้าไม่มีให้ใช้ชื่อเดิม
+
 # ------------------ ตั้งค่า Google Sheets API ✅------------------
 def init_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -48,12 +49,8 @@ def init_sheets():
     }
 
 sheets = init_sheets()
-# ------------------
-def find_empty_row(sheet):
-    """ ค้นหาแถวแรกที่ว่างใน Google Sheets """
-    col_values = sheet.col_values(1)  # ดึงค่าทั้งคอลัมน์ A
-    return len(col_values) + 1  # หาตำแหน่งแถวว่างแถวถัดไป
-# ------------------ update_points_to_sheets ------------------
+
+# ------------------ update_points_to_sheets (แก้ไขแล้ว) ------------------
 def update_points_to_sheets(data, thread_name, guild, options: PointType, transaction_type="deposit"):
     """
     อัปเดตคะแนน BP ไปยัง "BP Ledger" และ WP ไปยัง "WD Check" ใน Google Sheets
@@ -69,17 +66,16 @@ def update_points_to_sheets(data, thread_name, guild, options: PointType, transa
     # ตรวจสอบว่าหัวตารางมีข้อมูลหรือยัง ถ้ายังให้สร้างหัวข้อใหม่
     if sheet.cell(1, 1).value is None:
         if options == PointType.BP:
-            sheet.update("A1",
-                         [["Timestamp", "User ID", "No.", "Name", "GR", "BP Deposit", "Thread name", "BP Withdraw"]])
+            sheet.append_row(["Timestamp", "User ID", "No.", "Name", "GR", "BP Deposit", "Thread name", "BP Withdraw"])
         else:  # WP
-            sheet.update("A1", [["Timestamp", "User ID", "No.", "Name", "WD Deposit", "Thread name"]])
+            sheet.append_row(["Timestamp", "User ID", "No.", "Name", "WD Deposit", "Thread name"])
 
-    start_row = find_empty_row(sheet)
     rows = []
 
     for user_id, (nickname, points, timestamp) in data.items():
-        member = guild.get_member(int(user_id))
-        no_value = extract_number_from_nickname(member.display_name if member else nickname)
+        member = guild.get_member(int(user_id)) if guild else None
+        display_name = member.display_name if member and member.display_name else nickname
+        no_value = extract_number_from_nickname(display_name)
 
         if options == PointType.BP:
             row = [
@@ -104,7 +100,7 @@ def update_points_to_sheets(data, thread_name, guild, options: PointType, transa
 
         rows.append(row)
 
-    # ใช้ append_rows เพื่อเพิ่มข้อมูลลงในชีตที่เลือก
+    # ใช้ append_rows เพื่อเพิ่มข้อมูลลงในชีตที่เลือก (แทนที่ update)
     sheet.append_rows(rows, value_input_option="RAW")
 # ------------------ Broadcast management ------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
