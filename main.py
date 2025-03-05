@@ -251,7 +251,7 @@ async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     nickname_number = extract_number_from_nickname(user.display_name if user else user.name)
     user_bp = {user.id: (nickname_number, bp, timestamp)}
-    update_points_to_sheets(user_bp, thread_name, interaction.guild, transaction_type="withdraw")
+    update_points_to_sheets(user_bp, thread_name, interaction.guild, options=PointType.BP, transaction_type="withdraw")
     embed = discord.Embed(title="❌ แจ้งถอน BP", description=f"{user.mention} ถอน {bp} BP",
                           color=discord.Color.red())
     embed.timestamp = datetime.now()
