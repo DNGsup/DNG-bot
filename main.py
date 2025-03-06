@@ -33,15 +33,20 @@ async def on_ready():
 # //////////////////////////// ดูค่าตั้งค่าของบอท ////////////////////////////
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
-    """ล็อกเธรดหลังจาก 24 ชั่วโมง ค่าคือ (86400)"""
-    await asyncio.sleep(86400)
+    """ล็อกเธรดหลังจาก 24 ชั่วโมง พร้อมส่งข้อความแจ้งเตือนก่อนปิด [24 ชั่วโมง ค่าคือ (86400)]"""
+    await asyncio.sleep(86400)  # รอ 24 ชั่วโมง
+
     try:
+        # ส่งข้อความแจ้งเตือนก่อนปิดเธรด
+        await thread.send("❌ หมดเวลาลงรูปแล้ว! เธรดนี้จะถูกปิด")
+        # ล็อกเธรด
         await thread.edit(locked=True)
+
     except discord.NotFound:
         print(f"Thread {thread.name} not found, it might be deleted.")
     except discord.Forbidden:
         print(f"❌ Bot ไม่มีสิทธิ์ในการล็อกเธรด {thread.name}. กรุณาให้สิทธิ์ 'Manage Threads'")
-
+# ////////////////////////////////////////////////////////////////////////////////////
 @bot.tree.command(name="broadcast_setting", description="ตั้งค่าห้องบอร์ดแคสต์")
 @app_commands.describe(
     action="เลือกการกระทำ (Add หรือ Remove)",
