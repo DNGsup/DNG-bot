@@ -31,6 +31,15 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
 # //////////////////////////// ดูค่าตั้งค่าของบอท ////////////////////////////
+# //////////////////////////// ฟังก์ชันแปลง "1m", "1h", หรือ "1d" เป็น timedelta
+def convert_to_timedelta(time_str):
+    if "m" in time_str:
+        return timedelta(minutes=int(time_str.replace("m", "")))
+    elif "h" in time_str:
+        return timedelta(hours=int(time_str.replace("h", "")))
+    elif "d" in time_str:
+        return timedelta(days=int(time_str.replace("d", "")))
+    return timedelta(hours=0)  # ค่าเริ่มต้น
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง พร้อมส่งข้อความแจ้งเตือนก่อนปิด [24 ชั่วโมง ค่าคือ (86400)]"""
@@ -284,7 +293,7 @@ async def dividend_wp(
         check: str
 ):
     # คำนวณเวลาจาก Deadline และ Check
-    time_now = datetime.utcnow()
+    time_now = datetime.now(local_tz)
     deadline_delta = convert_to_timedelta(deadline)
     check_delta = convert_to_timedelta(check)
 
@@ -298,7 +307,7 @@ async def dividend_wp(
         title="📌 ลงทะเบียนปันผล WP",
         description=f"""
         โปรดตรวจสอบ WP ของท่านได้ที่เว็บ [ลิงก์] จากนั้นพิมพ์จำนวน WP ในเธรด (ตัวเลขเท่านั้น) และรอแอดมินตรวจสอบ  
-        **❗ เวลาลงทะเบียนถึง: {deadline_str} UTC+1**  
+        **❗ เวลาลงทะเบียนถึง: {deadline_str} (time in game +1)**  
         หากไม่ลงทะเบียนในเวลาที่กำหนด ถือว่าสละสิทธิ์  
         """,
         color=discord.Color.blue()
@@ -323,29 +332,21 @@ async def dividend_wp(
 
     await interaction.response.send_message(f"✅ ตั้งค่าการลงทะเบียน WP สำเร็จ! เช็คที่ {room.mention}", ephemeral=True)
 
-# ฟังก์ชันแปลง "1h" หรือ "1d" เป็น timedelta
-def convert_to_timedelta(time_str):
-    if "h" in time_str:
-        return timedelta(hours=int(time_str.replace("h", "")))
-    elif "d" in time_str:
-        return timedelta(days=int(time_str.replace("d", "")))
-    return timedelta(hours=0)  # ค่าเริ่มต้น
-
 # ฟังก์ชันแจ้งเตือนก่อนปิดเธรด
 async def schedule_warning(thread, role, warning_time, close_time):
-    await asyncio.sleep((warning_time - datetime.utcnow()).total_seconds())
+    await asyncio.sleep((warning_time - datetime.now(local_tz)).total_seconds())
     await thread.send(
         f"⏳ อย่าลืมลงทะเบียนเพื่อรับปันผล {role.mention}\n**จะปิดในอีก 1 ชั่วโมง (ปิดเวลา {close_time.strftime('%d/%m/%y %H:%M')} UTC+1)**")
 
 # ฟังก์ชันปิดเธรด
 async def schedule_thread_close(thread, close_time):
-    await asyncio.sleep((close_time - datetime.utcnow()).total_seconds())
+    await asyncio.sleep((close_time - datetime.now(local_tz)).total_seconds())
     await thread.edit(locked=True, archived=True)
     await thread.send("🚫 ปิดรับลงทะเบียน WP แล้ว")
 
 # ฟังก์ชันตรวจสอบ WP
 async def schedule_wp_check(thread, check_time):
-    await asyncio.sleep((check_time - datetime.utcnow()).total_seconds())
+    await asyncio.sleep((check_time - datetime.now(local_tz)).total_seconds())
 
     messages = [msg async for msg in thread.history(limit=100)]
     valid_entries = []
