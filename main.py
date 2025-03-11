@@ -261,12 +261,128 @@ async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp
                           color=discord.Color.red())
     embed.timestamp = datetime.now()
 
-    summary_channel = send_summary_embed(interaction.guild_id)
+    summary_channel = send_summary_embed(interaction.guild_id, PointType.BP)
     if summary_channel:
         await summary_channel.send(embed=embed)
         await interaction.followup.send(f"✅ หัก {bp} BP จาก {user.mention} แล้ว", ephemeral=True)
     else:
         await interaction.followup.send("⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้!", ephemeral=True)
+
+# ✅ ฟังก์ชันปันผล WD
+@bot.tree.command(name="dividend_wp", description="สร้างเธรดลงทะเบียนปันผล WP")
+@app_commands.describe(
+    room="ห้องที่ใช้สำหรับลงทะเบียน",
+    role="โรลที่จะถูกแท็ก",
+    deadline="ระยะเวลาการลงทะเบียน (1h, 1d)",
+    check="เวลาที่บอทจะเช็คหลังจากปิดเธรด (1h, 1d)"
+)
+async def dividend_wp(
+        interaction: discord.Interaction,
+        room: discord.TextChannel,
+        role: discord.Role,
+        deadline: str,
+        check: str
+):
+    # คำนวณเวลาจาก Deadline และ Check
+    time_now = datetime.utcnow()
+    deadline_delta = convert_to_timedelta(deadline)
+    check_delta = convert_to_timedelta(check)
+
+    close_time = time_now + deadline_delta  # เวลาปิดเธรด
+    check_time = close_time + check_delta  # เวลาตรวจสอบ
+
+    deadline_str = close_time.strftime("%d/%m/%y %H:%M")
+
+    # สร้าง Embed
+    embed = discord.Embed(
+        title="📌 ลงทะเบียนปันผล WP",
+        description=f"""
+        โปรดตรวจสอบ WP ของท่านได้ที่เว็บ [ลิงก์] จากนั้นพิมพ์จำนวน WP ในเธรด (ตัวเลขเท่านั้น) และรอแอดมินตรวจสอบ  
+        **❗ เวลาลงทะเบียนถึง: {deadline_str} UTC+1**  
+        หากไม่ลงทะเบียนในเวลาที่กำหนด ถือว่าสละสิทธิ์  
+        """,
+        color=discord.Color.blue()
+    )
+
+    # ส่ง Embed ไปยังห้องที่กำหนด
+    msg = await room.send(embed=embed)
+
+    # สร้างเธรด
+    thread = await msg.create_thread(name="ลงทะเบียนปันผล WP", auto_archive_duration=1440)
+    await thread.send(f"{role.mention} กรุณาลงทะเบียน WP ของท่านโดยพิมพ์ตัวเลขเท่านั้น")
+
+    # ตั้งเวลาแจ้งเตือนก่อนปิดเธรด 1 ชั่วโมง
+    warning_time = close_time - timedelta(hours=1)
+    bot.loop.create_task(schedule_warning(thread, role, warning_time, close_time))
+
+    # ตั้งเวลาปิดเธรดอัตโนมัติ
+    bot.loop.create_task(schedule_thread_close(thread, close_time))
+
+    # ตั้งเวลาตรวจสอบ WP หลังจากปิดเธรด
+    bot.loop.create_task(schedule_wp_check(thread, check_time))
+
+    await interaction.response.send_message(f"✅ ตั้งค่าการลงทะเบียน WP สำเร็จ! เช็คที่ {room.mention}", ephemeral=True)
+
+# ฟังก์ชันแปลง "1h" หรือ "1d" เป็น timedelta
+def convert_to_timedelta(time_str):
+    if "h" in time_str:
+        return timedelta(hours=int(time_str.replace("h", "")))
+    elif "d" in time_str:
+        return timedelta(days=int(time_str.replace("d", "")))
+    return timedelta(hours=0)  # ค่าเริ่มต้น
+
+# ฟังก์ชันแจ้งเตือนก่อนปิดเธรด
+async def schedule_warning(thread, role, warning_time, close_time):
+    await asyncio.sleep((warning_time - datetime.utcnow()).total_seconds())
+    await thread.send(
+        f"⏳ อย่าลืมลงทะเบียนเพื่อรับปันผล {role.mention}\n**จะปิดในอีก 1 ชั่วโมง (ปิดเวลา {close_time.strftime('%d/%m/%y %H:%M')} UTC+1)**")
+
+# ฟังก์ชันปิดเธรด
+async def schedule_thread_close(thread, close_time):
+    await asyncio.sleep((close_time - datetime.utcnow()).total_seconds())
+    await thread.edit(locked=True, archived=True)
+    await thread.send("🚫 ปิดรับลงทะเบียน WP แล้ว")
+
+# ฟังก์ชันตรวจสอบ WP
+async def schedule_wp_check(thread, check_time):
+    await asyncio.sleep((check_time - datetime.utcnow()).total_seconds())
+
+    messages = [msg async for msg in thread.history(limit=100)]
+    valid_entries = []
+    failed_entries = []
+
+    for msg in messages:
+        if msg.author.bot:  # ข้ามข้อความจากบอท
+            continue
+        if msg.reactions:
+            for reaction in msg.reactions:
+                if reaction.emoji == "Audit":  # ✅ ผ่าน
+                    valid_entries.append((msg.author.id, msg.content))
+                elif reaction.emoji == "❌":  # ❌ ไม่ผ่าน
+                    failed_entries.append(msg.author.id)
+
+    # บันทึก WP ลง Google Sheets
+    for user_id, wp_amount in valid_entries:
+        update_points_to_sheets(user_id, wp_amount)
+
+    # ส่ง Embed สรุปผล
+    summary_channel = bot.get_channel(wp_summary_room.get(thread.guild.id))
+    if summary_channel:
+        embed = discord.Embed(title="📊 สรุปการลงทะเบียนปันผล WP", color=discord.Color.green())
+
+        embed.add_field(
+            name="✅ ผ่านการตรวจสอบ",
+            value="\n".join([f"<@{user_id}> : {wp}" for user_id, wp in valid_entries]) if valid_entries else "ไม่มี",
+            inline=False
+        )
+
+        embed.add_field(
+            name="❌ ไม่ผ่านการตรวจสอบ",
+            value="\n".join([f"<@{user_id}>" for user_id in failed_entries]) if failed_entries else "ไม่มี",
+            inline=False
+        )
+
+        await summary_channel.send(embed=embed)
 # //////////////////////////// Giveaway ////////////////////////////
 # ✅ ตั้งค่าห้องสุ่มรางวัล
 @bot.tree.command(name="setgiveaway", description="ตั้งค่าห้องสำหรับจัดกิจกรรมสุ่มรางวัล")

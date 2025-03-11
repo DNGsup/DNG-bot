@@ -66,9 +66,9 @@ def update_points_to_sheets(data, thread_name, guild, options: PointType, transa
     # ตรวจสอบว่าหัวตารางมีข้อมูลหรือยัง ถ้ายังให้สร้างหัวข้อใหม่
     if sheet.cell(1, 1).value is None:
         if options == PointType.BP:
-            sheet.append_row(["Timestamp", "User ID", "No.", "Name", "GR", "BP Deposit", "Thread name", "BP Withdraw"])
+            sheet.append_row(["Timestamp", "Thread name", "User ID", "No.", "Name", "GR", "BP Deposit", "BP Withdraw"])
         else:  # WP
-            sheet.append_row(["Timestamp", "User ID", "No.", "Name", "WD Deposit", "Thread name"])
+            sheet.append_row(["Timestamp", "Thread name", "User ID", "No.", "Name", "WD Deposit", "WD Withdraw"])
 
     rows = []
 
@@ -86,16 +86,18 @@ def update_points_to_sheets(data, thread_name, guild, options: PointType, transa
                 None,  # GR (ข้ามเพื่อไม่ทับสูตร)
                 points if transaction_type == "deposit" else "",  # BP Deposit
                 thread_name if transaction_type == "deposit" else "",  # Thread name
-                points if transaction_type == "withdraw" else ""  # BP Withdraw
+                points if transaction_type == "withdraw" else "",  # BP Withdraw
+                thread_name if transaction_type == "withdraw" else ""  # Thread name สำหรับ withdraw
             ]
         else:  # WP
             row = [
                 timestamp,  # Timestamp
+                thread_name,  # Thread name
                 str(user_id),  # User ID
                 no_value,  # No. (เลข 5 หลัก)
                 None,  # Name (ข้ามเพื่อไม่ทับสูตร)
-                points,  # WD Deposit
-                thread_name  # Thread name
+                points if transaction_type == "deposit" else "",  # WD Deposit
+                points if transaction_type == "withdraw" else ""  # WD Withdraw
             ]
 
         rows.append(row)
