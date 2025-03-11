@@ -140,17 +140,7 @@ async def broadcast(
         print(f"Error in broadcast: {e}")
 
 # //////////////////////////// check bp คำสั่งใช้งานได้แล้ว✅ ////////////////////////////
-
-# //////////////////////////// setting_point (เปลี่ยนจาก set_bp) ////////////////////////////
-@bot.tree.command(name="setting_point", description="ตั้งค่าคะแนน BP หรือ WP ตามอีโมจิ")
-async def setting_point(interaction: discord.Interaction, options: PointType, emoji: str, points: int):
-    if options == PointType.BP:
-        bp_reactions[emoji] = points
-        await interaction.response.send_message(f'ตั้งค่าคะแนน BP ให้ {emoji} = {points} BP', ephemeral=True)
-    else:
-        wp_reactions[emoji] = points
-        await interaction.response.send_message(f'ตั้งค่าคะแนน WP ให้ {emoji} = {points} WP', ephemeral=True)
-# //////////////////////////// setting_room (เปลี่ยนจาก setting_bproom) ////////////////////////////
+# //////////////////////////// setting_room (เปลี่ยนจาก setting_bproom)
 @bot.tree.command(name="setting_room", description="ตั้งค่าห้องสำหรับสรุปคะแนน BP หรือ WP")
 async def setting_room(interaction: discord.Interaction, options: PointType, room: discord.TextChannel):
     if options == PointType.BP:
@@ -357,7 +347,7 @@ async def schedule_wp_check(thread, check_time):
             continue
         if msg.reactions:
             for reaction in msg.reactions:
-                if reaction.emoji == "Audit":  # ✅ ผ่าน
+                if str(reaction.emoji) == "✅":  # ✅ ผ่าน
                     valid_entries.append((msg.author.id, msg.content))
                 elif reaction.emoji == "❌":  # ❌ ไม่ผ่าน
                     failed_entries.append(msg.author.id)
