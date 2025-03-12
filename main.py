@@ -337,19 +337,22 @@ async def schedule_thread_close(thread, close_time):
     await thread.edit(locked=True, archived=True)
     await thread.send("🚫 ปิดรับลงทะเบียน WP แล้ว")
 
+
 # เก็บ Thread ID ที่เคยทำการตรวจสอบแล้ว
 checked_threads = set()
 
-# ฟังก์ชันตรวจสอบ WP
+
 async def schedule_wp_check(thread, check_time):
     global checked_threads
 
-    await asyncio.sleep((check_time - datetime.now(local_tz)).total_seconds())
+    # ป้องกันการทำงานซ้ำ
     if thread.id in checked_threads:
-        return  # หากเคยตรวจสอบไปแล้ว ให้จบฟังก์ชันเลย
-
+        return
     checked_threads.add(thread.id)  # บันทึกว่า Thread นี้ถูกตรวจสอบแล้ว
 
+    await asyncio.sleep((check_time - datetime.now(local_tz)).total_seconds())
+
+    # ดึงข้อความจากเธรด
     messages = [msg async for msg in thread.history(limit=100)]
     valid_entries = []
     failed_entries = []
@@ -357,43 +360,50 @@ async def schedule_wp_check(thread, check_time):
     for msg in messages:
         if msg.author.bot:  # ข้ามข้อความจากบอท
             continue
+
+        passed = False
         if msg.reactions:
             for reaction in msg.reactions:
                 if str(reaction.emoji) == "✅":  # ✅ ผ่าน
                     valid_entries.append((msg.author.id, msg.content))
-                elif reaction.emoji == "❌":  # ❌ ไม่ผ่าน
+                    passed = True
+                elif str(reaction.emoji) == "❌":  # ❌ ไม่ผ่าน
                     failed_entries.append(msg.author.id)
+                    passed = True
 
-        # ส่งข้อมูลไปยัง Google Sheets
+        # ถ้าไม่มีการกดอิโมจิเลย ก็ถือว่าไม่ถูกตรวจสอบ
+        if not passed:
+            continue
+
+    # ส่งข้อมูลไปยัง Google Sheets (ทำทีเดียว)
+    if valid_entries:
+        update_data = {}
         for user_id, wp_amount in valid_entries:
             try:
-                member = await thread.guild.fetch_member(user_id)  # ดึงข้อมูลสมาชิกแบบ async
+                member = await thread.guild.fetch_member(user_id)
             except discord.NotFound:
-                member = None  # ถ้าไม่พบสมาชิก ให้เป็น None
-            nickname_or_username = member.display_name if member and member.display_name else member.name
-            update_points_to_sheets(
-                {user_id: (nickname_or_username, int(wp_amount), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))},
-                thread.name,
-                thread.guild,
-                options=PointType.WP,
-                transaction_type="withdraw"
-            )
+                member = None
+            nickname_or_username = member.display_name if member else "Unknown"
 
-        # ส่ง Embed สรุปผล
-        summary_channel = bot.get_channel(wp_summary_room.get(thread.guild.id))
-        if summary_channel:
-            embed = discord.Embed(title="📊 สรุปการลงทะเบียนปันผล WP", color=discord.Color.green())
-            embed.add_field(
-                name="✅ ผ่านการตรวจสอบ",
-                value="\n".join(
-                    [f"<@{user_id}> : {wp}" for user_id, wp in valid_entries]) if valid_entries else "ไม่มี",
-                inline=False
-            )
-            embed.add_field(
-                name="❌ ไม่ผ่านการตรวจสอบ",
-                value="\n".join([f"<@{user_id}>" for user_id in failed_entries]) if failed_entries else "ไม่มี",
-                inline=False
-            )
+            update_data[user_id] = (nickname_or_username, int(wp_amount), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+        update_points_to_sheets(update_data, thread.name, thread.guild, options=PointType.WP,
+                                transaction_type="withdraw")
+
+    # ส่ง Embed สรุปผล (ทำทีเดียว)
+    summary_channel = bot.get_channel(wp_summary_room.get(thread.guild.id))
+    if summary_channel:
+        embed = discord.Embed(title="📊 สรุปการลงทะเบียนปันผล WP", color=discord.Color.green())
+        embed.add_field(
+            name="✅ ผ่านการตรวจสอบ",
+            value="\n".join([f"<@{user_id}> : {wp}" for user_id, wp in valid_entries]) if valid_entries else "ไม่มี",
+            inline=False
+        )
+        embed.add_field(
+            name="❌ ไม่ผ่านการตรวจสอบ",
+            value="\n".join([f"<@{user_id}>" for user_id in failed_entries]) if failed_entries else "ไม่มี",
+            inline=False
+        )
 
         await summary_channel.send(embed=embed)
 # //////////////////////////// Giveaway ////////////////////////////
