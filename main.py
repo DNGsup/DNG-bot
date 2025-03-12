@@ -357,7 +357,10 @@ async def schedule_wp_check(thread, check_time):
 
         # บันทึก WP ลง Google Sheets ✅ (เพิ่มพารามิเตอร์ที่ขาด)
         for user_id, wp_amount in valid_entries:
-            member = thread.guild.get_member(user_id)  # ดึงข้อมูลสมาชิกจาก guild
+            try:
+                member = await thread.guild.fetch_member(user_id)  # ดึงข้อมูลสมาชิกแบบ async
+            except discord.NotFound:
+                member = None  # ถ้าไม่พบสมาชิก ให้เป็น None
             nickname_or_username = member.display_name if member and member.display_name else member.name
             update_points_to_sheets(
                 {user_id: (nickname_or_username, int(wp_amount), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))},
