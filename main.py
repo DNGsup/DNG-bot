@@ -352,26 +352,31 @@ async def schedule_wp_check(thread, check_time):
                 elif reaction.emoji == "❌":  # ❌ ไม่ผ่าน
                     failed_entries.append(msg.author.id)
 
-    # บันทึก WP ลง Google Sheets
-    for user_id, wp_amount in valid_entries:
-        update_points_to_sheets(user_id, wp_amount)
+        # บันทึก WP ลง Google Sheets ✅ (เพิ่มพารามิเตอร์ที่ขาด)
+        for user_id, wp_amount in valid_entries:
+            update_points_to_sheets(
+                {user_id: (None, int(wp_amount), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))},
+                thread.name,
+                thread.guild,
+                options=PointType.WP,
+                transaction_type="deposit"
+            )
 
-    # ส่ง Embed สรุปผล
-    summary_channel = bot.get_channel(wp_summary_room.get(thread.guild.id))
-    if summary_channel:
-        embed = discord.Embed(title="📊 สรุปการลงทะเบียนปันผล WP", color=discord.Color.green())
-
-        embed.add_field(
-            name="✅ ผ่านการตรวจสอบ",
-            value="\n".join([f"<@{user_id}> : {wp}" for user_id, wp in valid_entries]) if valid_entries else "ไม่มี",
-            inline=False
-        )
-
-        embed.add_field(
-            name="❌ ไม่ผ่านการตรวจสอบ",
-            value="\n".join([f"<@{user_id}>" for user_id in failed_entries]) if failed_entries else "ไม่มี",
-            inline=False
-        )
+        # ส่ง Embed สรุปผล
+        summary_channel = bot.get_channel(wp_summary_room.get(thread.guild.id))
+        if summary_channel:
+            embed = discord.Embed(title="📊 สรุปการลงทะเบียนปันผล WP", color=discord.Color.green())
+            embed.add_field(
+                name="✅ ผ่านการตรวจสอบ",
+                value="\n".join(
+                    [f"<@{user_id}> : {wp}" for user_id, wp in valid_entries]) if valid_entries else "ไม่มี",
+                inline=False
+            )
+            embed.add_field(
+                name="❌ ไม่ผ่านการตรวจสอบ",
+                value="\n".join([f"<@{user_id}>" for user_id in failed_entries]) if failed_entries else "ไม่มี",
+                inline=False
+            )
 
         await summary_channel.send(embed=embed)
 # //////////////////////////// Giveaway ////////////////////////////

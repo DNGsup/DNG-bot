@@ -91,15 +91,15 @@ def update_points_to_sheets(data, thread_name, guild, options: PointType, transa
         if options == PointType.BP:
             row = [
                 timestamp,  # Timestamp
+                thread_name,  # Thread name
                 str(user_id),  # User ID
                 no_value,  # No. (เลข 5 หลัก)
                 None,  # Name (ข้ามเพื่อไม่ทับสูตร)
                 None,  # GR (ข้ามเพื่อไม่ทับสูตร)
                 points if transaction_type == "deposit" else "",  # BP Deposit
-                thread_name if transaction_type == "deposit" else "",  # Thread name
-                points if transaction_type == "withdraw" else "",  # BP Withdraw
-                thread_name if transaction_type == "withdraw" else ""  # Thread name สำหรับ withdraw
+                points if transaction_type == "withdraw" else ""  # BP Withdraw
             ]
+
         else:  # WP
             row = [
                 timestamp,  # Timestamp
