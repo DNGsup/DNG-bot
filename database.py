@@ -63,6 +63,8 @@ sheets = init_sheets()
 
 # ------------------ update_points_to_sheets (แก้ไขแล้ว) ------------------
 def update_points_to_sheets(data, thread_name, guild, options: PointType, transaction_type="deposit"):
+    print(f"📌 update_points_to_sheets called with options: {options}, transaction_type: {transaction_type}")
+    print(f"🔍 Data received: {data}")
     """
     อัปเดตคะแนน BP ไปยัง "BP Ledger" และ WP ไปยัง "WD Check" ใน Google Sheets
     - No. ดึงจากเลข 5 หลักในชื่อเล่น
@@ -73,6 +75,7 @@ def update_points_to_sheets(data, thread_name, guild, options: PointType, transa
 
     # เลือกชีตที่เหมาะสม
     sheet = sheets["bp_ledger"] if options == PointType.BP else sheets["wd_check"]
+    print(f"✅ Selected sheet: {'BP Ledger' if options == PointType.BP else 'WD Check'}")
 
     # ตรวจสอบว่าหัวตารางมีข้อมูลหรือยัง ถ้ายังให้สร้างหัวข้อใหม่
     if sheet.cell(1, 1).value is None:
@@ -89,6 +92,7 @@ def update_points_to_sheets(data, thread_name, guild, options: PointType, transa
         no_value = extract_number_from_nickname(display_name)
 
         if options == PointType.BP:
+            print(f"➡️ Processing BP for {user_id} ({display_name})")
             row = [
                 timestamp,  # Timestamp
                 thread_name,  # Thread name
@@ -101,6 +105,7 @@ def update_points_to_sheets(data, thread_name, guild, options: PointType, transa
             ]
 
         else:  # WP
+            print(f"➡️ Processing WP for {user_id} ({display_name})")
             row = [
                 timestamp,  # Timestamp
                 thread_name,  # Thread name
@@ -112,9 +117,11 @@ def update_points_to_sheets(data, thread_name, guild, options: PointType, transa
             ]
 
         rows.append(row)
-
-    # ใช้ append_rows เพื่อเพิ่มข้อมูลลงในชีตที่เลือก (แทนที่ update)
-    sheet.append_rows(rows, value_input_option="RAW")
+    if rows:
+        print(f"📤 Sending {len(rows)} rows to Google Sheets")
+        sheet.append_rows(rows, value_input_option="RAW")
+    else:
+        print("⚠️ No rows to append")
 # ------------------ Broadcast management ------------------
 def add_broadcast_channel(guild_id: str, channel_id: int):
     """เพิ่มช่องสำหรับ broadcast ในเซิร์ฟเวอร์ที่กำหนด"""
