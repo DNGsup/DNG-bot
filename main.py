@@ -201,7 +201,6 @@ async def checkpoints(interaction: discord.Interaction, options: PointType):
     sorted_points = sorted(user_points.items(), key=lambda x: x[1][1], reverse=True)
 
     if sorted_points:
-        print(f"📌 Updating Sheets for: {options}")  # เช็กว่าค่า options เป็น BP หรือ WP
         update_points_to_sheets(user_points, thread_name, interaction.guild, options=options, transaction_type="deposit")
 
     embed = discord.Embed(title=f"🏆 สรุปคะแนน {options.value}", color=discord.Color.gold())
@@ -355,8 +354,11 @@ async def schedule_wp_check(thread, check_time):
 
         # บันทึก WP ลง Google Sheets ✅ (เพิ่มพารามิเตอร์ที่ขาด)
         for user_id, wp_amount in valid_entries:
+            member = thread.guild.get_member(user_id)  # ดึงข้อมูลสมาชิกจาก guild
+            display_name = member.display_name if member and member.display_name else "Unknown"  # ใช้ชื่อแทน None
+
             update_points_to_sheets(
-                {user_id: (None, int(wp_amount), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))},
+                {user_id: (display_name, int(wp_amount), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))},
                 thread.name,
                 thread.guild,
                 options=PointType.WP,
