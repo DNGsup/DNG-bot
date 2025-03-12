@@ -337,9 +337,18 @@ async def schedule_thread_close(thread, close_time):
     await thread.edit(locked=True, archived=True)
     await thread.send("🚫 ปิดรับลงทะเบียน WP แล้ว")
 
+# เก็บ Thread ID ที่เคยทำการตรวจสอบแล้ว
+checked_threads = set()
+
 # ฟังก์ชันตรวจสอบ WP
 async def schedule_wp_check(thread, check_time):
+    global checked_threads
+
     await asyncio.sleep((check_time - datetime.now(local_tz)).total_seconds())
+    if thread.id in checked_threads:
+        return  # หากเคยตรวจสอบไปแล้ว ให้จบฟังก์ชันเลย
+
+    checked_threads.add(thread.id)  # บันทึกว่า Thread นี้ถูกตรวจสอบแล้ว
 
     messages = [msg async for msg in thread.history(limit=100)]
     valid_entries = []
@@ -355,7 +364,7 @@ async def schedule_wp_check(thread, check_time):
                 elif reaction.emoji == "❌":  # ❌ ไม่ผ่าน
                     failed_entries.append(msg.author.id)
 
-        # บันทึก WP ลง Google Sheets ✅ (เพิ่มพารามิเตอร์ที่ขาด)
+        # ส่งข้อมูลไปยัง Google Sheets
         for user_id, wp_amount in valid_entries:
             try:
                 member = await thread.guild.fetch_member(user_id)  # ดึงข้อมูลสมาชิกแบบ async
