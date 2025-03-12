@@ -306,8 +306,11 @@ async def dividend_wp(
     # ส่ง Embed ไปยังห้องที่กำหนด
     msg = await room.send(embed=embed)
 
-    # สร้างเธรด
-    thread = await msg.create_thread(name="ลงทะเบียนปันผล WP", auto_archive_duration=1440)
+    # สร้างเธรดพร้อมวันที่
+    current_date = datetime.now().strftime("%d/%m/%Y")  # ได้รูปแบบ "12/03/2025"
+    thread_name = f"ลงทะเบียนปันผล WP {current_date}"  # ตั้งชื่อเธรด
+
+    thread = await msg.create_thread(name=thread_name, auto_archive_duration=1440)
     await thread.send(f"{role.mention} กรุณาลงทะเบียน WP ของท่านโดยพิมพ์ตัวเลขเท่านั้น")
 
     # ตั้งเวลาแจ้งเตือนก่อนปิดเธรด 1 ชั่วโมง
@@ -355,14 +358,13 @@ async def schedule_wp_check(thread, check_time):
         # บันทึก WP ลง Google Sheets ✅ (เพิ่มพารามิเตอร์ที่ขาด)
         for user_id, wp_amount in valid_entries:
             member = thread.guild.get_member(user_id)  # ดึงข้อมูลสมาชิกจาก guild
-            display_name = member.display_name if member and member.display_name else "Unknown"  # ใช้ชื่อแทน None
-
+            nickname_or_username = member.display_name if member and member.display_name else member.name
             update_points_to_sheets(
-                {user_id: (display_name, int(wp_amount), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))},
+                {user_id: (nickname_or_username, int(wp_amount), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))},
                 thread.name,
                 thread.guild,
                 options=PointType.WP,
-                transaction_type="deposit"
+                transaction_type="withdraw"
             )
 
         # ส่ง Embed สรุปผล
