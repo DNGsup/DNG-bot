@@ -201,6 +201,7 @@ async def checkpoints(interaction: discord.Interaction, options: PointType):
     sorted_points = sorted(user_points.items(), key=lambda x: x[1][1], reverse=True)
 
     if sorted_points:
+        print(f"📌 Updating Sheets for: {options}")  # เช็กว่าค่า options เป็น BP หรือ WP
         update_points_to_sheets(user_points, thread_name, interaction.guild, options=options, transaction_type="deposit")
 
     embed = discord.Embed(title=f"🏆 สรุปคะแนน {options.value}", color=discord.Color.gold())
