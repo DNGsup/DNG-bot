@@ -181,7 +181,11 @@ async def checkpoints(interaction: discord.Interaction, options: PointType):
         print(f"🔍 ตรวจสอบชื่อ: UserID={message.author.id}, Raw Nickname={raw_nickname}, Extracted={nickname_number}")
 
         if message.author.id not in user_points:
-            user_points[message.author.id] = (nickname_number, 0, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            user_points[message.author.id] = (
+                nickname_number,
+                0,
+                datetime.now(pytz.utc).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S")  # ✅ ใช้เวลาไทย
+            )
 
         # นับคะแนนจากประเภทอีโมจิที่เลือก
         if options == PointType.BP:
@@ -195,7 +199,7 @@ async def checkpoints(interaction: discord.Interaction, options: PointType):
             user_points[message.author.id] = (
                 nickname_number,
                 user_points[message.author.id][1] + total_points,  # บวกคะแนนรวม
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                datetime.now(pytz.utc).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S")  # ✅ ใช้เวลาไทย 100%
             )
 
     sorted_points = sorted(user_points.items(), key=lambda x: x[1][1], reverse=True)
@@ -383,7 +387,7 @@ async def schedule_check(thread, check_time, options):
 
         passed = False
         if any(str(reaction.emoji) == "✅" for reaction in msg.reactions):
-            valid_entries[msg.author.id] = (msg.content, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            valid_entries[msg.author.id] = (msg.content, datetime.now(pytz.utc).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S"))
             passed = True
         elif any(str(reaction.emoji) == "❌" for reaction in msg.reactions):
             failed_entries.append(msg.author.id)
