@@ -298,17 +298,17 @@ async def dividend(
 
     # เลือก Embed ตามประเภท
     embed_description = (
-        f"""📌 วิธีการรับเพชร:
-        • เช็คยอด {options.value} และเพชรได้ที่ห้อง 𝐂𝐡𝐞𝐜𝐤-𝐩𝐨𝐢𝐧𝐭
-        • ลงรูปไอเทมที่เธรดด้านล่าง พร้อมพิมพ์ยอด {options.value}
+        f"""📝 วิธีการรับเพชร:
+        ・เช็คยอด {options.value} และเพชรได้ที่ห้อง 𝐂𝐡𝐞𝐜𝐤-𝐩𝐨𝐢𝐧𝐭
+        ・ลงรูปไอเทมที่เธรดด้านล่าง พร้อมพิมพ์ยอด {options.value}
 
         📆 ปิดรับการจ่าย-ปิดเปลี่ยนของ: {deadline_str}
 
         ⚠️ หากไม่ได้ลงรูปภายในช่วงเวลาที่กำหนด ถือว่าสละสิทธิ์
-
-        📌 How to Receive Diamonds:
-        • Check your {options.value} and diamond balance in the 𝐂𝐡𝐞𝐜𝐤-𝐩𝐨𝐢𝐧𝐭 channel.
-        • Post a picture of your item in the thread below and type your {options.value} amount.
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        📝 How to Receive Diamonds:
+        ・Check your {options.value} and diamond balance in the 𝐂𝐡𝐞𝐜𝐤-𝐩𝐨𝐢𝐧𝐭 channel.
+        ・Post a picture of your item in the thread below and type your {options.value} amount.
 
         📆 Payment & Item Exchange Deadline: {deadline_str}
 
@@ -326,12 +326,12 @@ async def dividend(
 
     # สร้างเธรดพร้อมวันที่
     current_date = datetime.now().strftime("%d/%m/%Y")
-    thread_name = f"ลงทะเบียนปันผล {options.value} {current_date}"
+    thread_name = f"💎 ปันผล (Dividend) {options.value} {current_date}"
 
     thread = await msg.create_thread(name=thread_name, auto_archive_duration=1440)
-    await thread.send(f"{role.mention}\n "
-                      f"อย่าลืมตรวจสอบ {options.value} ให้ถูกต้อง **ลงแค่รูปและยอด {options.value} เท่านั้น‼\n"
-                      f"Don't forget to check {options.value} correctly. **Only post the picture and the {options.value} amount‼**")
+    await thread.send(f"อย่าลืมตรวจสอบ {options.value} ให้ถูกต้อง ⚠️**ลงแค่รูปและยอด {options.value} เท่านั้น‼**\n "
+                      f"Don't forget to check {options.value} correctly.⚠️**Only post the picture and the {options.value} amount‼**\n"
+                      f"{role.mention}")
 
     # ตั้งเวลาแจ้งเตือนก่อนปิดเธรด 1 ชั่วโมง
     warning_time = close_time - timedelta(hours=1)
@@ -341,21 +341,23 @@ async def dividend(
     # ตั้งเวลาตรวจสอบคะแนนหลังจากปิดเธรด
     bot.loop.create_task(schedule_check(thread, check_time, options))
 
-    await interaction.followup.send(f"✅ ตั้งค่าการลงทะเบียน {options.value} สำเร็จ! เช็คที่ {room.mention}", ephemeral=True)
+    await interaction.followup.send(f"✅ โพสต์ปันผล {options.value} เรียบร้อย! เช็คที่ {room.mention}", ephemeral=True)
 
 
 # ฟังก์ชันแจ้งเตือนก่อนปิดเธรด
 async def schedule_warning(thread, role, warning_time, close_time):
     await asyncio.sleep((warning_time - datetime.now(local_tz)).total_seconds())
     await thread.send(
-        f"⏳ อย่าลืมลงทะเบียนเพื่อรับปันผล {role.mention}\n**จะปิดในอีก 1 ชั่วโมง (ปิดเวลา {close_time.strftime('%d/%m/%y %H:%M')} UTC+1)**")
+        f"⏳ อย่าลืมตั้งของ // เปลี่ยนไอเทม // เช็คยอดให้ถูกต้องกันนะครับ {role.mention}\n** "
+        f"เธรดจะปิดในอีก 1 ชั่วโมง (ปิดเวลา {close_time.strftime('%d/%m/%y %H:%M')})**\n\n"
+        f"> Don't forget to receive dividends // change items // check the balance correctly.")
 
 
 # ฟังก์ชันปิดเธรด
 async def schedule_thread_close(thread, close_time):
     await asyncio.sleep((close_time - datetime.now(local_tz)).total_seconds())
     await thread.edit(locked=True, archived=True)
-    await thread.send("🚫 ปิดรับลงทะเบียนแล้ว")
+    await thread.send("# 🚫 Closed")
 
 
 # เก็บ Thread ID ที่เคยทำการตรวจสอบแล้ว
@@ -410,15 +412,15 @@ async def schedule_check(thread, check_time, options):
     summary_channel = bot.get_channel(
         bp_summary_room.get(thread.guild.id) if options == PointType.BP else wp_summary_room.get(thread.guild.id))
     if summary_channel:
-        embed = discord.Embed(title=f"📊 สรุปการลงทะเบียนปันผล {options.value}", color=discord.Color.green())
+        embed = discord.Embed(title=f"📊 Dividend Summary {options.value}\n", color=discord.Color.green())
         embed.add_field(
-            name="✅ ผ่านการตรวจสอบ",
-            value="\n".join([f"<@{user_id}> : {amount}" for user_id, (amount, _) in valid_entries.items()]) if valid_entries else "ไม่มี",
+            name="✅ List received",
+            value="\n".join([f"<@{user_id}> ﹕{amount} {options.value}" for user_id, (amount, _) in valid_entries.items()]) if valid_entries else "ไม่มี",
             inline=False
         )
         embed.add_field(
-            name="❌ ไม่ผ่านการตรวจสอบ",
-            value="\n".join([f"<@{user_id}>" for user_id in failed_entries]) if failed_entries else "ไม่มี",
+            name="❌ Not verified",
+            value="\n".join([f"<@{user_id}>\n" for user_id in failed_entries]) if failed_entries else "ไม่มี",
             inline=False
         )
 
