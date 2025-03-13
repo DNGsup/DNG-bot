@@ -243,7 +243,7 @@ async def addpoints(interaction: discord.Interaction, options: PointType, user: 
     else:
         await interaction.followup.send(f"⚠️ ไม่พบห้องสรุป {options.value} ที่ตั้งค่าไว้!", ephemeral=True)
 
-# ✅ ฟังก์ชันหักคะแนน Bp
+# ✅ ฟังก์ชันถอนคะแนน Bp
 @bot.tree.command(name="withdraw_bp", description="หักคะแนน BP ของสมาชิก")
 async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp: int):
     if not isinstance(interaction.channel, discord.Thread):
@@ -268,15 +268,17 @@ async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp
         await interaction.followup.send("⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้!", ephemeral=True)
 
 # ✅ ฟังก์ชันปันผล WD
-@bot.tree.command(name="dividend_wp", description="สร้างเธรดลงทะเบียนปันผล WP")
+@bot.tree.command(name="dividend", description="สร้างเธรดลงทะเบียนปันผล BP หรือ WP")
 @app_commands.describe(
+    options="เลือกประเภท (BP หรือ WP)",
     room="ห้องที่ใช้สำหรับลงทะเบียน",
     role="โรลที่จะถูกแท็ก",
     deadline="ระยะเวลาการลงทะเบียน (1h, 1d)",
     check="เวลาที่บอทจะเช็คหลังจากปิดเธรด (1h, 1d)"
 )
-async def dividend_wp(
+async def dividend(
         interaction: discord.Interaction,
+        options: PointType,
         room: discord.TextChannel,
         role: discord.Role,
         deadline: str,
@@ -289,17 +291,30 @@ async def dividend_wp(
 
     close_time = time_now + deadline_delta  # เวลาปิดเธรด
     check_time = close_time + check_delta  # เวลาตรวจสอบ
-
     deadline_str = close_time.strftime("%d/%m/%y %H:%M")
 
-    # สร้าง Embed
+    # เลือก Embed ตามประเภท
+    embed_description = (
+        f"""📌 วิธีการรับเพชร:
+            • เช็คยอด {options.value} และเพชรได้ที่ห้อง 𝐂𝐡𝐞𝐜𝐤-𝐩𝐨𝐢𝐧𝐭
+            • ลงรูปไอเทมที่เธรดด้านล่าง พร้อมพิมพ์ยอด {options.value}
+
+            📆 ปิดรับการจ่าย-ปิดเปลี่ยนของ: {deadline_str}
+
+            ⚠️ หากไม่ได้ลงรูปภายในช่วงเวลาที่กำหนด ถือว่าสละสิทธิ์
+
+            📌 How to Receive Diamonds:
+            • Check your {options.value} and diamond balance in the 𝐂𝐡𝐞𝐜𝐤-𝐩𝐨𝐢𝐧𝐭 channel.
+            • Post a picture of your item in the thread below and type your {options.value} amount.
+
+            📆 Payment & Item Exchange Deadline: {deadline_str}
+
+            ⚠️ If you do not submit your picture within the given time, your claim will be forfeited.
+            """
+    )
     embed = discord.Embed(
-        title="📌 ลงทะเบียนปันผล WP",
-        description=f"""
-        โปรดตรวจสอบ WP ของท่านได้ที่เว็บ [ลิงก์] จากนั้นพิมพ์จำนวน WP ในเธรด (ตัวเลขเท่านั้น) และรอแอดมินตรวจสอบ  
-        **❗ เวลาลงทะเบียนถึง: {deadline_str} (time in game +1)**  
-        หากไม่ลงทะเบียนในเวลาที่กำหนด ถือว่าสละสิทธิ์  
-        """,
+        title="📢 รับยอดปันผล (Dividend)",
+        description=embed_description,
         color=discord.Color.blue()
     )
 
@@ -307,19 +322,17 @@ async def dividend_wp(
     msg = await room.send(embed=embed)
 
     # สร้างเธรดพร้อมวันที่
-    current_date = datetime.now().strftime("%d/%m/%Y")  # ได้รูปแบบ "12/03/2025"
-    thread_name = f"ลงทะเบียนปันผล WP {current_date}"  # ตั้งชื่อเธรด
+    current_date = datetime.now().strftime("%d/%m/%Y")
+    thread_name = f"ลงทะเบียนปันผล {options.value} {current_date}"
 
     thread = await msg.create_thread(name=thread_name, auto_archive_duration=1440)
-    await thread.send(f"{role.mention} กรุณาลงทะเบียน WP ของท่านโดยพิมพ์ตัวเลขเท่านั้น")
+    await thread.send(f"{role.mention} กรุณาลงทะเบียน {options.value} ของท่านโดยพิมพ์ตัวเลขเท่านั้น")
 
     # ตั้งเวลาแจ้งเตือนก่อนปิดเธรด 1 ชั่วโมง
     warning_time = close_time - timedelta(hours=1)
     bot.loop.create_task(schedule_warning(thread, role, warning_time, close_time))
-
     # ตั้งเวลาปิดเธรดอัตโนมัติ
     bot.loop.create_task(schedule_thread_close(thread, close_time))
-
     # ตั้งเวลาตรวจสอบ WP หลังจากปิดเธรด
     bot.loop.create_task(schedule_wp_check(thread, check_time))
 

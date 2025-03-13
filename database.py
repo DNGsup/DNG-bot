@@ -79,7 +79,7 @@ def update_points_to_sheets(data, thread_name, guild, options: PointType, transa
         if options == PointType.BP:
             sheet.append_row(["Timestamp", "Thread name", "User ID", "No.", "Name", "GR", "BP Deposit", "BP Withdraw"])
         else:  # WP
-            sheet.append_row(["Timestamp", "Thread name", "User ID", "No.", "Name", "WD Deposit", "WD Withdraw"])
+            sheet.append_row(["Timestamp", "Thread name", "User ID", "No. or Name", "Name", "WD Deposit", "WD Withdraw"])
 
     rows = []
 
