@@ -33,21 +33,13 @@ async def on_ready():
 # //////////////////////////// ดูค่าตั้งค่าของบอท ////////////////////////////
 # //////////////////////////// ฟังก์ชันแปลง "1m", "1h", หรือ "1d" เป็น timedelta
 def convert_to_timedelta(time_str):
-    """
-    แปลงค่าเวลาจาก "1d12h30m" เป็น timedelta
-    รองรับหน่วย d (วัน), h (ชั่วโมง), m (นาที)
-    """
-    pattern = r"(?P<days>\d+d)?(?P<hours>\d+h)?(?P<minutes>\d+m)?"
-    match = re.fullmatch(pattern, time_str)
-
-    if not match:
-        return timedelta(hours=0)  # ค่าเริ่มต้นถ้าข้อมูลไม่ถูกต้อง
-
-    days = int(match.group("days")[:-1]) if match.group("days") else 0
-    hours = int(match.group("hours")[:-1]) if match.group("hours") else 0
-    minutes = int(match.group("minutes")[:-1]) if match.group("minutes") else 0
-
-    return timedelta(days=days, hours=hours, minutes=minutes)
+    if "m" in time_str:
+        return timedelta(minutes=int(time_str.replace("m", "")))
+    elif "h" in time_str:
+        return timedelta(hours=int(time_str.replace("h", "")))
+    elif "d" in time_str:
+        return timedelta(days=int(time_str.replace("d", "")))
+    return timedelta(hours=0)  # ค่าเริ่มต้น
 # //////////////////////////// broadcast ใช้งานได้แล้ว ✅////////////////////////////
 async def lock_thread_after_delay(thread: discord.Thread):
     """ล็อกเธรดหลังจาก 24 ชั่วโมง พร้อมส่งข้อความแจ้งเตือนก่อนปิด [24 ชั่วโมง ค่าคือ (86400)]"""
