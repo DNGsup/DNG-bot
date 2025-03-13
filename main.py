@@ -227,7 +227,7 @@ async def addpoints(interaction: discord.Interaction, options: PointType, user: 
 
     await interaction.response.defer(thinking=True, ephemeral=True)
     thread_name = interaction.channel.name
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S")  # ✅ ใช้เวลาไทย
     nickname_number = extract_number_from_nickname(user.display_name)
 
     user_points = {user.id: (nickname_number, points, timestamp)}
@@ -252,7 +252,7 @@ async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp
 
     await interaction.response.defer(thinking=True, ephemeral=True)
     thread_name = interaction.channel.name
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S")  # ✅ ใช้เวลาไทย
     nickname_number = extract_number_from_nickname(user.display_name if user else user.name)
     user_bp = {user.id: (nickname_number, bp, timestamp)}
     update_points_to_sheets(user_bp, thread_name, interaction.guild, options=PointType.BP, transaction_type="withdraw")
@@ -362,7 +362,6 @@ async def schedule_thread_close(thread, close_time):
 
 # เก็บ Thread ID ที่เคยทำการตรวจสอบแล้ว
 checked_threads = set()
-
 
 async def schedule_check(thread, check_time, options):
     global checked_threads
