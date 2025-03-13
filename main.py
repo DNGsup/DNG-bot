@@ -268,6 +268,7 @@ async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp
         await interaction.followup.send("⚠️ ไม่พบห้องสรุป BP ที่ตั้งค่าไว้!", ephemeral=True)
 
 # ✅ ฟังก์ชันปันผล WD
+# ✅ ฟังก์ชันปันผล WD
 @bot.tree.command(name="dividend", description="สร้างเธรดลงทะเบียนปันผล BP หรือ WP")
 @app_commands.describe(
     options="เลือกประเภท (BP หรือ WP)",
@@ -284,6 +285,8 @@ async def dividend(
         deadline: str,
         check: str
 ):
+    await interaction.response.defer(thinking=True, ephemeral=True)  # ป้องกัน Interaction หมดอายุ
+
     # คำนวณเวลาจาก Deadline และ Check
     time_now = datetime.now(local_tz)
     deadline_delta = convert_to_timedelta(deadline)
@@ -296,21 +299,21 @@ async def dividend(
     # เลือก Embed ตามประเภท
     embed_description = (
         f"""📌 วิธีการรับเพชร:
-            • เช็คยอด {options.value} และเพชรได้ที่ห้อง 𝐂𝐡𝐞𝐜𝐤-𝐩𝐨𝐢𝐧𝐭
-            • ลงรูปไอเทมที่เธรดด้านล่าง พร้อมพิมพ์ยอด {options.value}
+        • เช็คยอด {options.value} และเพชรได้ที่ห้อง 𝐂𝐡𝐞𝐜𝐤-𝐩𝐨𝐢𝐧𝐭
+        • ลงรูปไอเทมที่เธรดด้านล่าง พร้อมพิมพ์ยอด {options.value}
 
-            📆 ปิดรับการจ่าย-ปิดเปลี่ยนของ: {deadline_str}
+        📆 ปิดรับการจ่าย-ปิดเปลี่ยนของ: {deadline_str}
 
-            ⚠️ หากไม่ได้ลงรูปภายในช่วงเวลาที่กำหนด ถือว่าสละสิทธิ์
+        ⚠️ หากไม่ได้ลงรูปภายในช่วงเวลาที่กำหนด ถือว่าสละสิทธิ์
 
-            📌 How to Receive Diamonds:
-            • Check your {options.value} and diamond balance in the 𝐂𝐡𝐞𝐜𝐤-𝐩𝐨𝐢𝐧𝐭 channel.
-            • Post a picture of your item in the thread below and type your {options.value} amount.
+        📌 How to Receive Diamonds:
+        • Check your {options.value} and diamond balance in the 𝐂𝐡𝐞𝐜𝐤-𝐩𝐨𝐢𝐧𝐭 channel.
+        • Post a picture of your item in the thread below and type your {options.value} amount.
 
-            📆 Payment & Item Exchange Deadline: {deadline_str}
+        📆 Payment & Item Exchange Deadline: {deadline_str}
 
-            ⚠️ If you do not submit your picture within the given time, your claim will be forfeited.
-            """
+        ⚠️ If you do not submit your picture within the given time, your claim will be forfeited.
+        """
     )
     embed = discord.Embed(
         title="📢 รับยอดปันผล (Dividend)",
@@ -326,17 +329,20 @@ async def dividend(
     thread_name = f"ลงทะเบียนปันผล {options.value} {current_date}"
 
     thread = await msg.create_thread(name=thread_name, auto_archive_duration=1440)
-    await thread.send(f"{role.mention} กรุณาลงทะเบียน {options.value} ของท่านโดยพิมพ์ตัวเลขเท่านั้น")
+    await thread.send(f"{role.mention}\n "
+                      f"อย่าลืมตรวจสอบ {options.value} ให้ถูกต้อง **ลงแค่รูปและยอด {options.value} เท่านั้น‼\n"
+                      f"Don't forget to check {options.value} correctly. **Only post the picture and the {options.value} amount‼**")
 
     # ตั้งเวลาแจ้งเตือนก่อนปิดเธรด 1 ชั่วโมง
     warning_time = close_time - timedelta(hours=1)
     bot.loop.create_task(schedule_warning(thread, role, warning_time, close_time))
     # ตั้งเวลาปิดเธรดอัตโนมัติ
     bot.loop.create_task(schedule_thread_close(thread, close_time))
-    # ตั้งเวลาตรวจสอบ WP หลังจากปิดเธรด
-    bot.loop.create_task(schedule_wp_check(thread, check_time))
+    # ตั้งเวลาตรวจสอบคะแนนหลังจากปิดเธรด
+    bot.loop.create_task(schedule_check(thread, check_time, options))
 
-    await interaction.response.send_message(f"✅ ตั้งค่าการลงทะเบียน WP สำเร็จ! เช็คที่ {room.mention}", ephemeral=True)
+    await interaction.followup.send(f"✅ ตั้งค่าการลงทะเบียน {options.value} สำเร็จ! เช็คที่ {room.mention}", ephemeral=True)
+
 
 # ฟังก์ชันแจ้งเตือนก่อนปิดเธรด
 async def schedule_warning(thread, role, warning_time, close_time):
@@ -344,45 +350,43 @@ async def schedule_warning(thread, role, warning_time, close_time):
     await thread.send(
         f"⏳ อย่าลืมลงทะเบียนเพื่อรับปันผล {role.mention}\n**จะปิดในอีก 1 ชั่วโมง (ปิดเวลา {close_time.strftime('%d/%m/%y %H:%M')} UTC+1)**")
 
+
 # ฟังก์ชันปิดเธรด
 async def schedule_thread_close(thread, close_time):
     await asyncio.sleep((close_time - datetime.now(local_tz)).total_seconds())
     await thread.edit(locked=True, archived=True)
-    await thread.send("🚫 ปิดรับลงทะเบียน WP แล้ว")
+    await thread.send("🚫 ปิดรับลงทะเบียนแล้ว")
 
 
 # เก็บ Thread ID ที่เคยทำการตรวจสอบแล้ว
 checked_threads = set()
 
 
-async def schedule_wp_check(thread, check_time):
+async def schedule_check(thread, check_time, options):
     global checked_threads
 
     # ป้องกันการทำงานซ้ำ
     if thread.id in checked_threads:
         return
-    checked_threads.add(thread.id)  # บันทึกว่า Thread นี้ถูกตรวจสอบแล้ว
+    checked_threads.add(thread.id)
 
     await asyncio.sleep((check_time - datetime.now(local_tz)).total_seconds())
 
-    # ดึงข้อความจากเธรด
     messages = [msg async for msg in thread.history(limit=100)]
-    valid_entries = []
+    valid_entries = {}
     failed_entries = []
 
     for msg in messages:
-        if msg.author.bot:  # ข้ามข้อความจากบอท
+        if msg.author.bot:
             continue
 
         passed = False
-        if msg.reactions:
-            for reaction in msg.reactions:
-                if str(reaction.emoji) == "✅":  # ✅ ผ่าน
-                    valid_entries.append((msg.author.id, msg.content))
-                    passed = True
-                elif str(reaction.emoji) == "❌":  # ❌ ไม่ผ่าน
-                    failed_entries.append(msg.author.id)
-                    passed = True
+        if any(str(reaction.emoji) == "✅" for reaction in msg.reactions):
+            valid_entries[msg.author.id] = (msg.content, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            passed = True
+        elif any(str(reaction.emoji) == "❌" for reaction in msg.reactions):
+            failed_entries.append(msg.author.id)
+            passed = True
 
         # ถ้าไม่มีการกดอิโมจิเลย ก็ถือว่าไม่ถูกตรวจสอบ
         if not passed:
@@ -391,25 +395,25 @@ async def schedule_wp_check(thread, check_time):
     # ส่งข้อมูลไปยัง Google Sheets (ทำทีเดียว)
     if valid_entries:
         update_data = {}
-        for user_id, wp_amount in valid_entries:
+        for user_id, (amount, timestamp) in valid_entries.items():
             try:
                 member = await thread.guild.fetch_member(user_id)
             except discord.NotFound:
                 member = None
             nickname_or_username = member.display_name if member else "Unknown"
 
-            update_data[user_id] = (nickname_or_username, int(wp_amount), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            update_data[user_id] = (nickname_or_username, int(amount), timestamp)
 
-        update_points_to_sheets(update_data, thread.name, thread.guild, options=PointType.WP,
-                                transaction_type="withdraw")
+        update_points_to_sheets(update_data, thread.name, thread.guild, options=options, transaction_type="withdraw")
 
     # ส่ง Embed สรุปผล (ทำทีเดียว)
-    summary_channel = bot.get_channel(wp_summary_room.get(thread.guild.id))
+    summary_channel = bot.get_channel(
+        bp_summary_room.get(thread.guild.id) if options == PointType.BP else wp_summary_room.get(thread.guild.id))
     if summary_channel:
-        embed = discord.Embed(title="📊 สรุปการลงทะเบียนปันผล WP", color=discord.Color.green())
+        embed = discord.Embed(title=f"📊 สรุปการลงทะเบียนปันผล {options.value}", color=discord.Color.green())
         embed.add_field(
             name="✅ ผ่านการตรวจสอบ",
-            value="\n".join([f"<@{user_id}> : {wp}" for user_id, wp in valid_entries]) if valid_entries else "ไม่มี",
+            value="\n".join([f"<@{user_id}> : {amount}" for user_id, (amount, _) in valid_entries.items()]) if valid_entries else "ไม่มี",
             inline=False
         )
         embed.add_field(
@@ -419,6 +423,7 @@ async def schedule_wp_check(thread, check_time):
         )
 
         await summary_channel.send(embed=embed)
+
 # //////////////////////////// Giveaway ////////////////////////////
 # ✅ ตั้งค่าห้องสุ่มรางวัล
 @bot.tree.command(name="setgiveaway", description="ตั้งค่าห้องสำหรับจัดกิจกรรมสุ่มรางวัล")
