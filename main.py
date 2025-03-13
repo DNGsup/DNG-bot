@@ -227,7 +227,7 @@ async def addpoints(interaction: discord.Interaction, options: PointType, user: 
 
     await interaction.response.defer(thinking=True, ephemeral=True)
     thread_name = interaction.channel.name
-    timestamp = datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S")  # ✅ ใช้เวลาไทย
+    timestamp = datetime.now(pytz.utc).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S")
     nickname_number = extract_number_from_nickname(user.display_name)
 
     user_points = {user.id: (nickname_number, points, timestamp)}
@@ -252,7 +252,7 @@ async def withdraw_bp(interaction: discord.Interaction, user: discord.Member, bp
 
     await interaction.response.defer(thinking=True, ephemeral=True)
     thread_name = interaction.channel.name
-    timestamp = datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S")  # ✅ ใช้เวลาไทย
+    timestamp = datetime.now(pytz.utc).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S")
     nickname_number = extract_number_from_nickname(user.display_name if user else user.name)
     user_bp = {user.id: (nickname_number, bp, timestamp)}
     update_points_to_sheets(user_bp, thread_name, interaction.guild, options=PointType.BP, transaction_type="withdraw")
@@ -403,7 +403,7 @@ async def schedule_check(thread, check_time, options):
                 member = None
             nickname_or_username = member.display_name if member else "Unknown"
 
-            timestamp = datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S")  # ✅ ใช้เวลาประเทศไทย
+            timestamp = datetime.now(pytz.utc).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S")
             update_data[user_id] = (nickname_or_username, int(amount), timestamp)
 
         update_points_to_sheets(update_data, thread.name, thread.guild, options=options, transaction_type="withdraw")
